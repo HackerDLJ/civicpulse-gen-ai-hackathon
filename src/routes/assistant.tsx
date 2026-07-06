@@ -350,6 +350,7 @@ function AssistantPage() {
   const [activeId, setActiveId] = useState<string>("");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [assistantError, setAssistantError] = useState<null | { kind: "auth" | "server" | "unknown"; message: string; prompt: string }>(null);
   const [hydrated, setHydrated] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const runGemini = useServerFn(askGemini);

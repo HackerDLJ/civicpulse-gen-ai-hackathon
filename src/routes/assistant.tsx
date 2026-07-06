@@ -537,10 +537,7 @@ function AssistantPage() {
               )
             ))}
             {busy && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex items-center gap-3 text-sm shimmer-text">
-                <Sparkles className="h-4 w-4 text-indigo-neon" />
-                Reasoning across health, transit, and environment layers…
-              </div>
+              <AiThinkingSkeleton />
             )}
             <div ref={endRef} />
           </div>

@@ -404,6 +404,10 @@ function AnalyticsPage() {
         </div>
       )}
 
+      <div className="mt-6">
+        <LiveAlertsAnalytics />
+      </div>
+
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="glass-panel rounded-2xl p-5 xl:col-span-2">
           <div className="mb-2">

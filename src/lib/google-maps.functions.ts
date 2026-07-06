@@ -272,7 +272,7 @@ function recordStatus(s: ServiceStatus, outcome: FetchOutcome, sector: string) {
   }
 }
 
-export const getLiveHotspots = createServerFn({ method: "GET" }).handler(async (): Promise<LiveHotspotsResult> => {
+export const getLiveHotspots = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async (): Promise<LiveHotspotsResult> => {
   const airQuality = emptyStatus();
   const pollen = emptyStatus();
   const weather = emptyStatus();

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { KpiCardSkeleton, MapSkeleton, StreamSkeleton, EmptyState } from "@/components/pulse/Skeletons";
+import { CityMap } from "@/components/pulse/CityMap";
 
 export const Route = createFileRoute("/")({
   head: () => ({

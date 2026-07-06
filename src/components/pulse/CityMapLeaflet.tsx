@@ -329,7 +329,7 @@ export default function CityMapInner({ worldView = false, heightClass }: { world
         </span>
       </div>
 
-      <div className="relative aspect-[16/10] sm:aspect-[16/9] xl:aspect-[16/10] w-full rounded-xl border border-border overflow-hidden bg-surface-1">
+      <div className={cn("relative w-full rounded-xl border border-border overflow-hidden bg-surface-1", heightClass ?? "aspect-[16/10] sm:aspect-[16/9] xl:aspect-[16/10]")}>
         <div ref={containerRef} className="h-full w-full" />
 
         {!ready && !error && (

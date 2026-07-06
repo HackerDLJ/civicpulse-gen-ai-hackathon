@@ -269,6 +269,7 @@ function AlertsPage() {
             {filtered.map((a) => {
               const s = sevMap[a.severity] ?? sevMap.medium;
               const Icon = catIcon[a.category] ?? Activity;
+              const isGoogleDerived = a.id.startsWith("google-");
               return (
                 <div key={a.id} className={cn("glass-panel rounded-2xl p-4 md:p-5 relative overflow-hidden animate-rise", a.status !== "open" && "opacity-70")}>
                   <div className={cn("absolute left-0 top-0 h-full w-1", s.bar)} />
@@ -281,6 +282,11 @@ function AlertsPage() {
                         <span className={cn("text-[10px] font-semibold tracking-widest px-1.5 py-0.5 rounded border", s.ring, s.text)}>{s.label}</span>
                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{a.sector}</span>
                         <span className="text-[10px] text-muted-foreground">· {a.ts}</span>
+                        {isGoogleDerived && (
+                          <span className="text-[10px] font-semibold text-teal-neon inline-flex items-center gap-1">
+                            <Radio className="h-3 w-3" /> Google Maps live signal
+                          </span>
+                        )}
                         {a.status === "automated" && <span className="text-[10px] font-semibold text-indigo-neon">⚡ Workflow running</span>}
                         {a.status === "resolved" && <span className="text-[10px] font-semibold text-emerald-neon">✓ Resolved</span>}
                       </div>
@@ -289,7 +295,8 @@ function AlertsPage() {
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <button
-                        disabled={a.status !== "open"}
+                        disabled={a.status !== "open" || isGoogleDerived}
+                        title={isGoogleDerived ? "Live Google signal — resolves automatically when the metric clears" : undefined}
                         onClick={async () => {
                           const prev = a.status;
                           try {
@@ -307,7 +314,8 @@ function AlertsPage() {
                         <Zap className="h-3.5 w-3.5" /> Automate
                       </button>
                       <button
-                        disabled={a.status === "resolved"}
+                        disabled={a.status === "resolved" || isGoogleDerived}
+                        title={isGoogleDerived ? "Live Google signal — resolves automatically when the metric clears" : undefined}
                         onClick={async () => {
                           const prev = a.status;
                           try {

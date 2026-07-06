@@ -96,6 +96,7 @@ function loadGoogleMaps(): Promise<typeof google.maps> {
 export default function CityMapInner() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const trafficRef = useRef<google.maps.TrafficLayer | null>(null);
   const markersRef = useRef<Record<string, google.maps.Marker>>({});
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +104,16 @@ export default function CityMapInner() {
   const [hover, setHover] = useState<Hotspot | null>(null);
   const [pinned, setPinned] = useState<Hotspot | null>(null);
 
-  const visible = useMemo(() => hotspots.filter((h) => layers[h.layer]), [layers]);
+  const fetchLive = useServerFn(getLiveHotspots);
+  const { data, isLoading, isFetching, refetch, error: liveError } = useQuery({
+    queryKey: ["live-hotspots"],
+    queryFn: () => fetchLive(),
+    refetchInterval: 5 * 60 * 1000, // refresh every 5 min
+    staleTime: 60 * 1000,
+  });
+  const allHotspots: Hotspot[] = (data?.hotspots as Hotspot[] | undefined) ?? [];
+
+  const visible = useMemo(() => allHotspots.filter((h) => layers[h.layer]), [allHotspots, layers]);
   const activeCount = Object.values(layers).filter(Boolean).length;
   const focused = pinned ?? hover;
 

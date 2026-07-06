@@ -10,14 +10,13 @@ import { useEffect, useState } from "react";
 import {
   collection,
   onSnapshot,
-  doc,
-  updateDoc,
   query,
   orderBy,
   type DocumentData,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import type { Alert, Feedback } from "@/lib/pulse-data";
+import { updateAlertStatusFn, toggleFeedbackHandledFn } from "@/lib/firestore-mutations.functions";
 
 type State<T> = { data: T[] | null; loading: boolean; error: string | null };
 
@@ -112,12 +111,12 @@ export function useFirestoreFeedback() {
   return useCollection<Feedback>("feedback", normalizeFeedback);
 }
 
-// Mutations — writes ONLY the strict schema fields for their collection so the
-// snapshot listener never receives unexpected keys.
+// Mutations — routed through auth-gated server functions so anonymous users
+// cannot modify live operational data. See src/lib/firestore-mutations.functions.ts.
 export async function updateAlertStatus(id: string, status: Alert["status"]) {
-  await updateDoc(doc(db, "alerts", id), { status });
+  await updateAlertStatusFn({ data: { id, status } });
 }
 
 export async function toggleFeedbackHandled(id: string, handled: boolean) {
-  await updateDoc(doc(db, "feedback", id), { handled });
+  await toggleFeedbackHandledFn({ data: { id, handled } });
 }

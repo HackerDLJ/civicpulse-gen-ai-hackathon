@@ -1,15 +1,24 @@
-// Server-side Gemini 1.5 call. Keeps GEMINI_API_KEY off the browser.
+// Server-side Gemini call. Keeps GEMINI_API_KEY off the browser.
+// Requires an authenticated Supabase session to prevent anonymous quota abuse.
 import { createServerFn } from "@tanstack/react-start";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type AskInput = { prompt: string };
 
+const MAX_PROMPT_CHARS = 2000;
+
 export const askGemini = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown): AskInput => {
     if (!data || typeof data !== "object") throw new Error("Invalid input");
     const d = data as Record<string, unknown>;
     if (typeof d.prompt !== "string" || !d.prompt.trim()) throw new Error("Prompt is required");
-    return { prompt: d.prompt.trim() };
+    const prompt = d.prompt.trim();
+    if (prompt.length > MAX_PROMPT_CHARS) {
+      throw new Error(`Prompt exceeds maximum length of ${MAX_PROMPT_CHARS} characters`);
+    }
+    return { prompt };
   })
   .handler(async ({ data }) => {
     const key = process.env.GEMINI_API_KEY;

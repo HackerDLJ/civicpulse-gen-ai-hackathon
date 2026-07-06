@@ -163,17 +163,23 @@ function Sparkline({ data, tone }: { data: number[]; tone: keyof typeof toneMap 
   );
 }
 
-function KpiCard({ k }: { k: typeof kpis[number] }) {
+function KpiCard({ k, active, onClick }: { k: KpiDef; active: boolean; onClick: () => void }) {
   const t = toneMap[k.tone];
   const Trend = k.up ? TrendingUp : TrendingDown;
   return (
-    <div className="glass-panel rounded-2xl p-5 relative overflow-hidden">
+    <button
+      onClick={onClick}
+      className={cn(
+        "glass-panel rounded-2xl p-5 relative overflow-hidden text-left transition group hover:-translate-y-0.5",
+        active && "neon-ring-indigo ring-1 ring-indigo-neon/40"
+      )}
+    >
       <div className="flex items-start justify-between">
         <div>
           <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{k.label}</div>
           <div className="mt-2 text-3xl font-semibold tracking-tight">{k.value}</div>
         </div>
-        <div className={cn("h-9 w-9 grid place-items-center rounded-xl bg-surface-2", t.text)}>
+        <div className={cn("h-9 w-9 grid place-items-center rounded-xl bg-surface-2 transition group-hover:scale-110", t.text)}>
           <k.icon className="h-4 w-4" />
         </div>
       </div>
@@ -185,9 +191,95 @@ function KpiCard({ k }: { k: typeof kpis[number] }) {
       <div className="mt-2 -mx-1">
         <Sparkline data={k.trend} tone={k.tone} />
       </div>
+      <div className="mt-2 text-[10px] text-indigo-neon opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
+        {active ? "Hide 24h summary ↑" : <>Open 24h summary <ArrowUpRight className="h-3 w-3" /></>}
+      </div>
+    </button>
+  );
+}
+
+function KpiSummaryPanel({ k, onClose }: { k: KpiDef; onClose: () => void }) {
+  const s = kpiSummary[k.key];
+  const t = toneMap[k.tone];
+  const sevTone: Record<Anomaly["severity"], string> = {
+    high: "text-rose-neon border-rose-neon/40 bg-rose-neon/10",
+    medium: "text-amber-neon border-amber-neon/40 bg-amber-neon/10",
+    low: "text-teal-neon border-teal-neon/40 bg-teal-neon/10",
+  };
+  const maxAbs = Math.max(...s.sectors.map((r) => Math.abs(r.delta))) || 1;
+
+  return (
+    <div className="glass-panel rounded-2xl p-5 animate-rise mt-4 relative overflow-hidden">
+      <div className={cn("absolute left-0 top-0 h-full w-1", t.bg)} />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+            <k.icon className={cn("h-3 w-3", t.text)} /> {k.label} · 24h summary
+          </div>
+          <div className="mt-1 text-base font-semibold tracking-tight">{s.headline}</div>
+          <div className="mt-1 text-xs text-muted-foreground max-w-3xl leading-relaxed">{s.narrative}</div>
+        </div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Close summary">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+        {s.metrics.map((m) => (
+          <div key={m.label} className="rounded-lg border border-border bg-surface-1/60 px-3 py-2">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{m.label}</div>
+            <div className={cn("mt-0.5 text-lg font-semibold", t.text)}>{m.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Top sectors</div>
+          <div className="space-y-2">
+            {s.sectors.map((r) => (
+              <div key={r.sector} className="rounded-lg border border-border bg-surface-1/60 px-3 py-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="truncate">{r.sector}</span>
+                  <span className={cn("font-mono text-[11px]", t.text)}>{r.value}</span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full transition-all", r.delta >= 0 ? t.bg : "bg-rose-neon")}
+                      style={{ width: `${(Math.abs(r.delta) / maxAbs) * 100}%` }}
+                    />
+                  </div>
+                  <span className={cn("text-[10px] font-semibold w-12 text-right", r.delta >= 0 ? "text-emerald-neon" : "text-rose-neon")}>
+                    {r.delta >= 0 ? "+" : ""}{r.delta}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+            <AlertTriangle className="h-3 w-3 text-rose-neon" /> Notable anomalies
+          </div>
+          <div className="space-y-2">
+            {s.anomalies.map((a, i) => (
+              <div key={i} className={cn("rounded-lg border px-3 py-2 text-xs flex items-start gap-2", sevTone[a.severity])}>
+                <span className="font-mono text-[10px] opacity-80 shrink-0">{a.at}</span>
+                <span className="leading-snug">{a.label}</span>
+              </div>
+            ))}
+            {s.anomalies.length === 0 && (
+              <div className="text-[11px] text-muted-foreground">No anomalies detected in the last 24h.</div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
 
 // ---------------- CITY MAP ----------------
 

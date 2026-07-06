@@ -15,7 +15,7 @@
       {
         "name": "list_alerts",
         "title": "List live civic alerts",
-        "description": "List active CivicPulse alerts from the live Firestore `alerts` collection. Supports filtering by severity, sector, and status so agents can triage the city in real time.",
+        "description": "List active CivicPulse alerts from the live Firestore `alerts` collection. Supports filtering by severity, sector, and status so agents can triage the city in real time. Returns items conforming to the strict production alert schema.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -57,7 +57,85 @@
             }
           }
         },
-        "outputSchema": null
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "alerts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "critical",
+                      "high",
+                      "medium",
+                      "low"
+                    ]
+                  },
+                  "sector": {
+                    "type": "string"
+                  },
+                  "ts": {
+                    "type": "string"
+                  },
+                  "ageMin": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "automated",
+                      "resolved"
+                    ]
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "health",
+                      "environment",
+                      "traffic",
+                      "safety",
+                      "utility"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "detail",
+                  "severity",
+                  "sector",
+                  "ts",
+                  "ageMin",
+                  "status",
+                  "category"
+                ]
+              }
+            },
+            "count": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "alerts",
+            "count"
+          ]
+        }
       },
       {
         "name": "list_feedback",

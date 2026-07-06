@@ -135,7 +135,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 
 function AlertsPage() {
   const { data: alertsData, loading, error } = useFirestoreAlerts();
-  const { data: liveData, isFetching: liveFetching, isPending: livePending } = useLiveHotspots();
+  const { data: liveData, isFetching: liveFetching } = useLiveHotspots();
   const firestoreAlerts = alertsData ?? [];
   const googleAlerts = useMemo(() => deriveGoogleAlerts(liveData), [liveData]);
   const alerts = useMemo(() => {

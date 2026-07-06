@@ -397,6 +397,7 @@ function AssistantPage() {
     }));
     setInput("");
     setBusy(true);
+    setAssistantError(null);
 
     try {
       const raw = await runGemini({ data: { prompt: trimmed, context: liveContext || undefined } });
@@ -408,7 +409,11 @@ function AssistantPage() {
       }, 900);
     } catch (err) {
       setBusy(false);
-      toast.error("Gemini call failed", { description: err instanceof Error ? err.message : "Unknown error" });
+      const message = err instanceof Error ? err.message : "Unknown error";
+      const kind: "auth" | "server" | "unknown" =
+        /401|unauthor/i.test(message) ? "auth" : /5\d\d|server|timeout|fetch/i.test(message) ? "server" : "unknown";
+      setAssistantError({ kind, message, prompt: trimmed });
+      toast.error("Gemini call failed", { description: message });
     }
   }
 

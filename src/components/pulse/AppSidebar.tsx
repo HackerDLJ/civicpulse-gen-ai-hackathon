@@ -51,7 +51,7 @@ export function AppSidebar() {
         <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
           <div className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-neon to-teal-neon shrink-0 shadow-lg shadow-indigo-neon/20">
             <img src={logoAsset.url} alt="" className="h-5 w-5 [filter:brightness(0)_invert(1)]" />
-            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-neon pulse-dot" />
+            
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">

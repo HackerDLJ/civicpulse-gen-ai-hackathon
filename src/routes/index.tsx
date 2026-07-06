@@ -512,15 +512,28 @@ function StreamFeed() {
       </div>
       <div className="mt-4 flex-1 overflow-hidden relative">
         <div className="absolute inset-0 overflow-y-auto pr-1 space-y-2">
-          {stream.map((s) => (
-            <div key={s.id} className="animate-rise rounded-lg bg-surface-1/70 border border-border/60 px-3 py-2">
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
-                <span className={cn("font-medium", toneColor[s.tone])}>{s.channel}</span>
-                <span>{s.ts}</span>
+          {stream.length === 0 ? (
+            <EmptyState
+              title="Stream is quiet"
+              hint="No ingestion events in the last few seconds. Reconnect to force a resync with the 42 upstream layers."
+              icon={<Radio className="h-5 w-5" />}
+              actionLabel="Reconnect stream"
+              onAction={() => {
+                store.pushStream({ channel: "Ingestion", message: "Manual reconnect · re-subscribed to 42 upstream layers", tone: "indigo" });
+                toast.success("Stream reconnected", { description: "42 upstream layers re-subscribed." });
+              }}
+            />
+          ) : (
+            stream.map((s) => (
+              <div key={s.id} className="animate-rise rounded-lg bg-surface-1/70 border border-border/60 px-3 py-2">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
+                  <span className={cn("font-medium", toneColor[s.tone])}>{s.channel}</span>
+                  <span>{s.ts}</span>
+                </div>
+                <div className="mt-1 text-xs leading-snug">{s.message}</div>
               </div>
-              <div className="mt-1 text-xs leading-snug">{s.message}</div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

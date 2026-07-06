@@ -267,7 +267,7 @@ function AlertsPage() {
   };
   const signalChips = [
     { ...syncedChip("Health · Pollen", svc?.pollen), icon: Flower2 },
-    { ...syncedChip("Environment · Air Quality", svc?.airQuality), icon: WindIcon },
+    { ...syncedChip("Environment · Air Quality", svc?.airQuality), icon: Wind },
     { ...syncedChip("Environment · Weather", svc?.weather), icon: Thermometer },
     { ...syncedChip("Traffic · Routes", svc?.traffic), icon: TrafficCone },
   ];

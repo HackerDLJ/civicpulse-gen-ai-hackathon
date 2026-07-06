@@ -29,12 +29,13 @@ export const askGemini = createServerFn({ method: "POST" })
     if (!key) throw new Error("GEMINI_API_KEY is not configured on the server.");
 
     const genAI = new GoogleGenerativeAI(key);
+    const isAuthed = (context as { isAuthenticated?: boolean } | undefined)?.isAuthenticated === true;
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
       generationConfig: {
         responseMimeType: "application/json",
-        temperature: 0.4,
-        maxOutputTokens: 1024,
+        temperature: isAuthed ? 0.4 : 0.3,
+        maxOutputTokens: isAuthed ? 1024 : 512,
       },
     });
 

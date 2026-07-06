@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
-import { aqiTrend, trafficLoad, resourceMix, forecastSeries } from "@/lib/pulse-data";
+import { aqiTrend, trafficLoad, resourceMix, forecastSeries, type Alert } from "@/lib/pulse-data";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine, ReferenceDot } from "recharts";
-import { TrendingUp, Layers, Sparkles, Cpu, ArrowLeft, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { TrendingUp, Layers, Sparkles, Cpu, ArrowLeft, AlertTriangle, Radio, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { KpiCardSkeleton, ChartSkeleton, useHydrated } from "@/components/pulse/Skeletons";
+import { useFirestoreAlerts } from "@/lib/firestore-hooks";
+import { useLiveHotspots, deriveGoogleAlerts } from "@/lib/live-hotspots";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({ meta: [{ title: "Data Analytics · CivicPulse" }, { name: "description", content: "Cross-sector trends, forecasts, and resource allocation intelligence." }] }),
@@ -214,6 +217,153 @@ function DrillPanel({ payload, onBack }: { payload: DrillPayload; onBack: () => 
   );
 }
 
+const SEV_COLOR: Record<Alert["severity"], string> = {
+  critical: "var(--rose-neon)",
+  high: "var(--amber-neon)",
+  medium: "var(--teal-neon)",
+  low: "var(--emerald-neon)",
+};
+const CAT_COLOR: Record<Alert["category"], string> = {
+  health: "var(--rose-neon)",
+  environment: "var(--teal-neon)",
+  traffic: "var(--amber-neon)",
+  safety: "var(--indigo-neon)",
+  utility: "var(--emerald-neon)",
+};
+
+function LiveAlertsAnalytics() {
+  const { data: fsAlerts, loading: fsLoading, error: fsError } = useFirestoreAlerts();
+  const { data: live, isFetching, refetch } = useLiveHotspots();
+
+  const merged = useMemo<Alert[]>(() => {
+    const google = deriveGoogleAlerts(live);
+    const firestore = fsAlerts ?? [];
+    const byId = new Map<string, Alert>();
+    for (const a of [...firestore, ...google]) byId.set(a.id, a);
+    return Array.from(byId.values());
+  }, [fsAlerts, live]);
+
+  const bySeverity = useMemo(() => {
+    const counts: Record<Alert["severity"], number> = { critical: 0, high: 0, medium: 0, low: 0 };
+    for (const a of merged) counts[a.severity]++;
+    return (["critical", "high", "medium", "low"] as const).map((k) => ({ name: k, value: counts[k] }));
+  }, [merged]);
+
+  const byCategory = useMemo(() => {
+    const counts: Record<Alert["category"], number> = { health: 0, environment: 0, traffic: 0, safety: 0, utility: 0 };
+    for (const a of merged) counts[a.category]++;
+    return (["health", "environment", "traffic", "safety", "utility"] as const).map((k) => ({ name: k, value: counts[k] }));
+  }, [merged]);
+
+  const bySector = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of merged) m.set(a.sector, (m.get(a.sector) ?? 0) + 1);
+    return Array.from(m.entries()).map(([sector, count]) => ({ sector, count })).sort((a, b) => b.count - a.count).slice(0, 8);
+  }, [merged]);
+
+  const openCount = merged.filter((a) => a.status === "open").length;
+  const criticalCount = merged.filter((a) => a.severity === "critical").length;
+  const fetchedAt = live ? new Date(live.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+
+  return (
+    <div className="glass-panel rounded-2xl p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <Radio className="h-4 w-4 text-rose-neon" /> Live Alerts Analytics
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            All records from <Link to="/alerts" className="underline hover:text-foreground">/alerts</Link> — Firestore alerts + live Google Maps derived alerts · last sync {fetchedAt}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-rose-neon/40 bg-rose-neon/10 text-rose-neon">
+            {criticalCount} critical
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-surface-2 text-muted-foreground">
+            {openCount} open · {merged.length} total
+          </span>
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-surface-2 disabled:opacity-60"
+          >
+            <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} /> Sync
+          </button>
+        </div>
+      </div>
+
+      {fsError && (
+        <div className="mb-3 text-[11px] rounded-md border border-amber-neon/40 bg-amber-neon/10 text-amber-neon px-2.5 py-1.5">
+          Firestore alerts partially unavailable — showing live Google-derived alerts only.
+        </div>
+      )}
+
+      {fsLoading && merged.length === 0 ? (
+        <ChartSkeleton label="Syncing alerts from /alerts" />
+      ) : merged.length === 0 ? (
+        <div className="text-xs text-muted-foreground py-6 text-center">
+          No alert records to analyze yet. Once /alerts receives data, it will sync here automatically.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">By severity</div>
+            <div className="h-56">
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={bySeverity} dataKey="value" nameKey="name" innerRadius={45} outerRadius={80} paddingAngle={2} stroke="oklch(0.22 0.025 260)">
+                    {bySeverity.map((s, i) => <Cell key={i} fill={SEV_COLOR[s.name]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">By category</div>
+            <div className="h-56">
+              <ResponsiveContainer>
+                <BarChart data={byCategory}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
+                  <XAxis dataKey="name" stroke="oklch(0.7 0.03 258)" fontSize={10} />
+                  <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} allowDecimals={false} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {byCategory.map((c, i) => <Cell key={i} fill={CAT_COLOR[c.name]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Top sectors</div>
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {bySector.map((s) => {
+                const max = bySector[0].count;
+                return (
+                  <div key={s.sector} className="rounded-lg border border-border bg-surface-1/60 px-3 py-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="truncate">{s.sector}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground">{s.count}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                      <div className="h-full rounded-full bg-indigo-neon" style={{ width: `${(s.count / max) * 100}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AnalyticsPage() {
   const [drill, setDrill] = useState<KpiKey | null>(null);
   const hydrated = useHydrated(500);
@@ -253,6 +403,10 @@ function AnalyticsPage() {
           <DrillPanel payload={drillData[drill]} onBack={() => setDrill(null)} />
         </div>
       )}
+
+      <div className="mt-6">
+        <LiveAlertsAnalytics />
+      </div>
 
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="glass-panel rounded-2xl p-5 xl:col-span-2">

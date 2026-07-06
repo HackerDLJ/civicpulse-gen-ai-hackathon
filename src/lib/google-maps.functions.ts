@@ -304,3 +304,101 @@ export const getLiveHotspots = createServerFn({ method: "GET" }).handler(async (
     services: { airQuality, pollen, weather, traffic },
   };
 });
+
+// ---------- Google Maps Community feedback (Places API New reviews) ----------
+
+export type GoogleCommunityReview = {
+  id: string;
+  ward: string;
+  placeName: string;
+  placeId: string;
+  author: string;
+  authorPhoto?: string;
+  rating: number;
+  text: string;
+  relativeTime: string;
+  publishTime?: string;
+  sentiment: "Positive" | "Negative" | "Neutral";
+};
+
+export type GoogleCommunityFeedbackResult = {
+  reviews: GoogleCommunityReview[];
+  fetchedAt: string;
+  source: string;
+  status: ServiceStatus;
+};
+
+function sentimentFor(rating: number): GoogleCommunityReview["sentiment"] {
+  if (rating >= 4) return "Positive";
+  if (rating <= 2) return "Negative";
+  return "Neutral";
+}
+
+async function fetchWardReviews(p: typeof POINTS[number]): Promise<{ reviews: GoogleCommunityReview[]; error?: string }> {
+  try {
+    const r = await fetch(`${GATEWAY}/places/v1/places:searchNearby`, {
+      method: "POST",
+      headers: {
+        ...headers(),
+        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.reviews",
+      },
+      body: JSON.stringify({
+        maxResultCount: 5,
+        rankPreference: "POPULARITY",
+        locationRestriction: { circle: { center: { latitude: p.lat, longitude: p.lng }, radius: 1500 } },
+      }),
+    });
+    if (!r.ok) return { reviews: [], error: `HTTP ${r.status}` };
+    const j = await r.json();
+    const out: GoogleCommunityReview[] = [];
+    for (const place of j?.places ?? []) {
+      const placeName: string = place?.displayName?.text ?? "Nearby place";
+      const placeId: string = place?.id ?? "";
+      for (const rev of place?.reviews ?? []) {
+        const rating = Number(rev?.rating ?? 0);
+        const text: string = rev?.text?.text ?? rev?.originalText?.text ?? "";
+        if (!text) continue;
+        out.push({
+          id: `gr-${placeId}-${out.length}`,
+          ward: p.sector,
+          placeName,
+          placeId,
+          author: rev?.authorAttribution?.displayName ?? "Google user",
+          authorPhoto: rev?.authorAttribution?.photoUri,
+          rating,
+          text,
+          relativeTime: rev?.relativePublishTimeDescription ?? "recently",
+          publishTime: rev?.publishTime,
+          sentiment: sentimentFor(rating),
+        });
+      }
+    }
+    return { reviews: out.slice(0, 4) };
+  } catch (e) {
+    return { reviews: [], error: e instanceof Error ? e.message : "unknown" };
+  }
+}
+
+export const getGoogleCommunityFeedback = createServerFn({ method: "GET" }).handler(async () => {
+  const status: ServiceStatus = { ok: true, attempted: 0, succeeded: 0, failed: 0, errors: [] };
+  const reviews: GoogleCommunityReview[] = [];
+  const tasks = POINTS.map(async (p) => {
+    status.attempted++;
+    const res = await fetchWardReviews(p);
+    if (res.error) {
+      status.failed++;
+      status.errors.push(`${p.sector}: ${res.error}`);
+    } else {
+      status.succeeded++;
+      reviews.push(...res.reviews);
+    }
+  });
+  await Promise.all(tasks);
+  status.ok = status.failed === 0;
+  return {
+    reviews,
+    fetchedAt: new Date().toISOString(),
+    source: "Google Maps Platform · Places API (New) reviews",
+    status,
+  } as GoogleCommunityFeedbackResult;
+});

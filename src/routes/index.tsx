@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
-import { useStore, aqiTrend, wardSatisfaction, store, type StreamEvent } from "@/lib/pulse-data";
-import { Activity, Wind, Gauge, Smile, TrendingUp, TrendingDown, MapPin, Layers, Zap, Radio, Car, HeartPulse, X, AlertTriangle, ArrowUpRight } from "lucide-react";
+import { useStore, aqiTrend, store, type StreamEvent, type Alert, type Feedback } from "@/lib/pulse-data";
+import { useFirestoreAlerts, useFirestoreFeedback } from "@/lib/firestore-hooks";
+import { Activity, Wind, Gauge, Smile, TrendingUp, TrendingDown, MapPin, Zap, Radio, X, AlertTriangle, ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { KpiCardSkeleton, MapSkeleton, StreamSkeleton, EmptyState } from "@/components/pulse/Skeletons";

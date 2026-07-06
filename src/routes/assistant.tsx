@@ -351,6 +351,7 @@ function AssistantPage() {
   const [busy, setBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const runGemini = useServerFn(askGemini);
 
   // Bootstrap: idempotent, StrictMode-safe.
   useEffect(() => {
@@ -378,7 +379,7 @@ function AssistantPage() {
     setConversations((prev) => prev.map((c) => c.id === activeId ? fn(c) : c));
   }
 
-  function ask(q: string) {
+  async function ask(q: string) {
     if (!q.trim() || busy || !active) return;
     const trimmed = q.trim();
     const uid = "u" + Math.random().toString(36).slice(2, 8);
@@ -393,19 +394,22 @@ function AssistantPage() {
     setInput("");
     setBusy(true);
 
-    setTimeout(() => {
-      const ans = generateAnswer(trimmed);
+    try {
+      const raw = await runGemini({ data: { prompt: trimmed } });
+      const ans: Answer = { ...raw, actions: raw.actions ?? [] };
       updateActive((c) => ({ ...c, messages: [...c.messages, { id: aid, role: "ai", answer: ans, ts: Date.now(), streaming: true }] }));
       setTimeout(() => {
         updateActive((c) => ({ ...c, messages: c.messages.map((m) => m.id === aid && m.role === "ai" ? { ...m, streaming: false } : m) }));
         setBusy(false);
-      }, 1400);
-    }, 500);
+      }, 900);
+    } catch (err) {
+      setBusy(false);
+      toast.error("Gemini call failed", { description: err instanceof Error ? err.message : "Unknown error" });
+    }
   }
 
-  function regenerate(aiMsgId: string) {
+  async function regenerate(aiMsgId: string) {
     if (!active || busy) return;
-    // Find preceding user prompt
     const idx = active.messages.findIndex((m) => m.id === aiMsgId);
     if (idx < 1) return;
     const prev = active.messages[idx - 1];
@@ -414,10 +418,11 @@ function AssistantPage() {
     setBusy(true);
     updateActive((c) => ({ ...c, messages: c.messages.map((m) => m.id === aiMsgId && m.role === "ai" ? { ...m, streaming: true } : m) }));
 
-    setTimeout(() => {
+    try {
       const existing = active.messages.find((m) => m.id === aiMsgId);
       const regenCount = existing && existing.role === "ai" ? (existing.regenerated ?? 0) + 1 : 1;
-      const ans = generateAnswer(prev.text, regenCount);
+      const raw = await runGemini({ data: { prompt: prev.text } });
+      const ans: Answer = { ...raw, actions: raw.actions ?? [] };
       updateActive((c) => ({
         ...c,
         messages: c.messages.map((m) =>
@@ -430,8 +435,11 @@ function AssistantPage() {
         updateActive((c) => ({ ...c, messages: c.messages.map((m) => m.id === aiMsgId && m.role === "ai" ? { ...m, streaming: false } : m) }));
         setBusy(false);
         toast.success("Answer regenerated", { description: "Gemini reran the reasoning trace with fresh sampling.", duration: 2400 });
-      }, 1200);
-    }, 400);
+      }, 800);
+    } catch (err) {
+      setBusy(false);
+      toast.error("Gemini regenerate failed", { description: err instanceof Error ? err.message : "Unknown error" });
+    }
   }
 
   function startNew() {

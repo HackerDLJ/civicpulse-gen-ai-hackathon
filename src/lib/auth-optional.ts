@@ -35,13 +35,12 @@ export const optionalSupabaseAuth = createMiddleware({ type: "function" }).serve
       });
       const { data, error } = await supabase.auth.getClaims(token);
       if (error || !data?.claims?.sub) return next({ context: empty });
-      return next({
-        context: {
-          userId: data.claims.sub,
-          isAuthenticated: true,
-          claims: data.claims as Record<string, unknown>,
-        } satisfies OptionalAuthContext,
-      });
+      const ctx: OptionalAuthContext = {
+        userId: data.claims.sub,
+        isAuthenticated: true,
+        claims: data.claims as Record<string, unknown>,
+      };
+      return next({ context: ctx });
     } catch {
       return next({ context: empty });
     }

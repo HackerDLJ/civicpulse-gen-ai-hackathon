@@ -218,13 +218,15 @@ function FeedbackPage() {
           {rows.length === 0 && (
             <div className="pt-4">
               <EmptyState
-                title={`No ${tab === "all" ? "" : tab.toLowerCase() + " "}signals right now`}
-                hint={<>The Gemini extractor is still watching {feedback.length} live channels. Reset the filter to see everything, or retry the ingestion sweep.</>}
+                title={activeFilters > 0 ? "No signals match your filters" : "No signals right now"}
+                hint={activeFilters > 0
+                  ? <>Try clearing filters — the Gemini extractor is still watching {feedback.length} live signals in the Firestore stream.</>
+                  : <>The Gemini extractor hasn't picked up anything new yet. Give the Firestore stream a moment, or retry the ingestion sweep.</>}
                 icon={<MessageSquareText className="h-5 w-5" />}
-                actionLabel={tab === "all" ? "Retry ingestion sweep" : "Show all signals"}
+                actionLabel={activeFilters > 0 ? "Reset filters" : "Retry ingestion sweep"}
                 onAction={() => {
-                  if (tab === "all") toast.success("Ingestion sweep re-queued", { description: "Gemini re-scanning last 15m of citizen channels." });
-                  else setTab("all");
+                  if (activeFilters > 0) resetFilters();
+                  else toast.success("Ingestion sweep re-queued", { description: "Gemini re-scanning last 15m of citizen channels." });
                 }}
               />
             </div>

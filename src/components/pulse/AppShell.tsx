@@ -25,6 +25,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const meta = titles[pathname] ?? titles["/"];
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [nowUtc, setNowUtc] = useState<string>("--:--");
+  useEffect(() => {
+    const tick = () => setNowUtc(new Date().toISOString().slice(11, 16));
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Auto-close drawer on route change.
   useEffect(() => { setDrawerOpen(false); }, [pathname]);

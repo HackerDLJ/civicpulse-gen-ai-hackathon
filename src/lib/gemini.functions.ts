@@ -3,7 +3,7 @@
 // callers (public /assistant route) fall back to a safe default config.
 import { createServerFn } from "@tanstack/react-start";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { optionalSupabaseAuth } from "@/lib/auth-optional";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type AskInput = { prompt: string; context?: string };
 
@@ -11,7 +11,7 @@ const MAX_PROMPT_CHARS = 2000;
 const MAX_CONTEXT_CHARS = 4000;
 
 export const askGemini = createServerFn({ method: "POST" })
-  .middleware([optionalSupabaseAuth])
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown): AskInput => {
     if (!data || typeof data !== "object") throw new Error("Invalid input");
     const d = data as Record<string, unknown>;

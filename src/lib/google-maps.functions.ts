@@ -380,7 +380,7 @@ async function fetchWardReviews(p: typeof POINTS[number]): Promise<{ reviews: Go
   }
 }
 
-export const getGoogleCommunityFeedback = createServerFn({ method: "GET" }).handler(async () => {
+export const getGoogleCommunityFeedback = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async () => {
   const status: ServiceStatus = { ok: true, attempted: 0, succeeded: 0, failed: 0, errors: [] };
   const reviews: GoogleCommunityReview[] = [];
   const tasks = POINTS.map(async (p) => {

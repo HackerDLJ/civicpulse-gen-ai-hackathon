@@ -12,8 +12,8 @@ export const askGemini = createServerFn({ method: "POST" })
     return { prompt: d.prompt.trim() };
   })
   .handler(async ({ data }) => {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("GEMINI_API_KEY is not configured on the server.");
+    const key = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    if (!key) throw new Error("GOOGLE_API_KEY is not configured on the server.");
 
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({

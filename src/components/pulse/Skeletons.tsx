@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, RotateCw, Radio } from "lucide-react";
 
-export function Skel({ className }: { className?: string }) {
-  return <div className={cn("skeleton-block", className)} />;
+export function Skel({ className, style }: { className?: string; style?: CSSProperties }) {
+  return <div className={cn("skeleton-block", className)} style={style} />;
 }
 
 /** CivicPulse KPI card skeleton. */

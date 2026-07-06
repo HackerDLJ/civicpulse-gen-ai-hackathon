@@ -39,12 +39,18 @@ type Store = {
 };
 
 const initialAlerts: Alert[] = [
-  { id: "a1", title: "Unseasonal 22% spike in respiratory complaints", detail: "Sector B — correlation with PM2.5 rise near industrial belt.", severity: "critical", sector: "Sector B", ts: "2m ago", status: "open", category: "health" },
-  { id: "a2", title: "Traffic cascade risk on Ring Road E-14", detail: "Predicted congestion +38% in the next 40 minutes.", severity: "high", sector: "Ring Rd E-14", ts: "6m ago", status: "open", category: "traffic" },
-  { id: "a3", title: "Water pressure anomaly detected", detail: "Ward 7 substation reporting 0.7 bar deviation over baseline.", severity: "medium", sector: "Ward 7", ts: "14m ago", status: "open", category: "utility" },
-  { id: "a4", title: "Heat island intensification", detail: "Downtown grid trending +2.4°C above forecast.", severity: "high", sector: "Downtown", ts: "22m ago", status: "open", category: "environment" },
-  { id: "a5", title: "Crowd density > 8k in Central Plaza", detail: "Model suggests safety threshold breach in 25 min.", severity: "medium", sector: "Central Plaza", ts: "31m ago", status: "open", category: "safety" },
-  { id: "a6", title: "Clinic capacity 92% in Ward 3", detail: "Overflow triggers within 90 min at current arrival rate.", severity: "high", sector: "Ward 3", ts: "44m ago", status: "open", category: "health" },
+  { id: "a1", title: "Unseasonal 22% spike in respiratory complaints", detail: "Sector B — correlation with PM2.5 rise near industrial belt.", severity: "critical", sector: "Sector B", ts: "2m ago", ageMin: 2, status: "open", category: "health" },
+  { id: "a2", title: "Traffic cascade risk on Ring Road E-14", detail: "Predicted congestion +38% in the next 40 minutes.", severity: "high", sector: "Ring Rd E-14", ts: "6m ago", ageMin: 6, status: "open", category: "traffic" },
+  { id: "a3", title: "Water pressure anomaly detected", detail: "Ward 7 substation reporting 0.7 bar deviation over baseline.", severity: "medium", sector: "Ward 7", ts: "14m ago", ageMin: 14, status: "open", category: "utility" },
+  { id: "a4", title: "Heat island intensification", detail: "Downtown grid trending +2.4°C above forecast.", severity: "high", sector: "Downtown", ts: "22m ago", ageMin: 22, status: "open", category: "environment" },
+  { id: "a5", title: "Crowd density > 8k in Central Plaza", detail: "Model suggests safety threshold breach in 25 min.", severity: "medium", sector: "Central Plaza", ts: "31m ago", ageMin: 31, status: "open", category: "safety" },
+  { id: "a6", title: "Clinic capacity 92% in Ward 3", detail: "Overflow triggers within 90 min at current arrival rate.", severity: "high", sector: "Ward 3", ts: "44m ago", ageMin: 44, status: "open", category: "health" },
+  { id: "a7", title: "PM2.5 exceedance · Riverside industrial", detail: "5-node rolling avg breached 65 µg/m³ threshold.", severity: "medium", sector: "Riverside", ts: "1h 12m ago", ageMin: 72, status: "open", category: "environment" },
+  { id: "a8", title: "NR-9 junction spillback recurring", detail: "Fourth cascade in the last 3h at 4th Ave junction.", severity: "low", sector: "NR-9 / 4th Ave", ts: "2h 30m ago", ageMin: 150, status: "open", category: "traffic" },
+  { id: "a9", title: "Streetlight cluster outage", detail: "12 lights offline · Ward 5 · Maple corridor.", severity: "medium", sector: "Ward 5", ts: "4h 05m ago", ageMin: 245, status: "open", category: "safety" },
+  { id: "a10", title: "EMR anomaly · Ward 2 pediatric fever cluster", detail: "Bayesian model detected 3.1σ deviation over baseline.", severity: "high", sector: "Ward 2", ts: "8h 20m ago", ageMin: 500, status: "open", category: "health" },
+  { id: "a11", title: "Overnight sanitation route missed", detail: "Downtown loop truck offline — dispatched replacement.", severity: "low", sector: "Downtown", ts: "14h ago", ageMin: 840, status: "automated", category: "utility" },
+  { id: "a12", title: "Grid load balancing initiated", detail: "Auto-shifted 4.2 MW from substation W7 to W8.", severity: "low", sector: "Ward 8", ts: "22h ago", ageMin: 1320, status: "resolved", category: "utility" },
 ];
 
 const initialFeedback: Feedback[] = [

@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
-import { aqiTrend, trafficLoad, resourceMix, forecastSeries } from "@/lib/pulse-data";
+import { aqiTrend, trafficLoad, resourceMix, forecastSeries, type Alert } from "@/lib/pulse-data";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine, ReferenceDot } from "recharts";
-import { TrendingUp, Layers, Sparkles, Cpu, ArrowLeft, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { TrendingUp, Layers, Sparkles, Cpu, ArrowLeft, AlertTriangle, Radio, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { KpiCardSkeleton, ChartSkeleton, useHydrated } from "@/components/pulse/Skeletons";
+import { useFirestoreAlerts } from "@/lib/firestore-hooks";
+import { useLiveHotspots, deriveGoogleAlerts } from "@/lib/live-hotspots";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({ meta: [{ title: "Data Analytics · CivicPulse" }, { name: "description", content: "Cross-sector trends, forecasts, and resource allocation intelligence." }] }),

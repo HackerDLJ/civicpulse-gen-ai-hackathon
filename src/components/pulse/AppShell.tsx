@@ -37,6 +37,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               <kbd className="inline-flex items-center gap-0.5 text-[10px] rounded bg-surface-3 px-1.5 py-0.5"><Command className="h-3 w-3" />K</kbd>
             </div>
 
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("civicpulse:onboarding"))}
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg border border-border bg-surface-1/60 hover:bg-surface-2 transition text-[11px] text-muted-foreground hover:text-foreground"
+              aria-label="Replay walkthrough"
+            >
+              <HelpCircle className="h-3.5 w-3.5" /> Tour
+            </button>
+
             <Link to="/alerts" className="relative grid place-items-center h-9 w-9 rounded-lg border border-border bg-surface-1/60 hover:bg-surface-2 transition">
               <Bell className="h-4 w-4" />
               <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-rose-neon pulse-dot" />

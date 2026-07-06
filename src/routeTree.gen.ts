@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as HeroRouteImport } from './routes/hero'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as AssistantRouteImport } from './routes/assistant'
@@ -23,6 +24,11 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HeroRoute = HeroRouteImport.update({
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AssistantRoute
   '/feedback': typeof FeedbackRoute
   '/hero': typeof HeroRoute
+  '/map': typeof MapRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/assistant': typeof AssistantRoute
   '/feedback': typeof FeedbackRoute
   '/hero': typeof HeroRoute
+  '/map': typeof MapRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/assistant': typeof AssistantRoute
   '/feedback': typeof FeedbackRoute
   '/hero': typeof HeroRoute
+  '/map': typeof MapRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/feedback'
     | '/hero'
+    | '/map'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/feedback'
     | '/hero'
+    | '/map'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/feedback'
     | '/hero'
+    | '/map'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   AssistantRoute: typeof AssistantRoute
   FeedbackRoute: typeof FeedbackRoute
   HeroRoute: typeof HeroRoute
+  MapRoute: typeof MapRoute
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -170,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hero': {
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssistantRoute: AssistantRoute,
   FeedbackRoute: FeedbackRoute,
   HeroRoute: HeroRoute,
+  MapRoute: MapRoute,
   McpRoute: McpRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:

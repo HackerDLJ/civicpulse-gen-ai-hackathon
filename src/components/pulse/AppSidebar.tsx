@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles,
+  Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles, Globe2,
   ChevronsLeft, ChevronsRight, LayoutGrid,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 const nav: Array<{ to: string; label: string; icon: typeof Activity; exact?: boolean; hint: string }> = [
   { to: "/", label: "Dashboard", icon: Activity, exact: true, hint: "Real-time city vitals" },
+  { to: "/map", label: "World Map", icon: Globe2, hint: "Full pan & zoom" },
   { to: "/alerts", label: "Live Alerts", icon: AlertTriangle, hint: "AI-flagged anomalies" },
   { to: "/analytics", label: "Data Analytics", icon: BarChart3, hint: "Forecasts & trends" },
   { to: "/feedback", label: "Community Feedback", icon: MessageSquareText, hint: "Citizen sentiment" },

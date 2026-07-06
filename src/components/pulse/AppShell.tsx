@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Bell, Command, HelpCircle, Menu, Search, X, Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles } from "lucide-react";
+import { Bell, Command, HelpCircle, Menu, Search, X, Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles, Globe2 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
 import { Onboarding } from "./Onboarding";
@@ -8,6 +8,7 @@ import logoAsset from "@/assets/civicpulse-logo.svg.asset.json";
 
 const titles: Record<string, { title: string; sub: string }> = {
   "/": { title: "Operations Dashboard", sub: "Real-time city vitals · fused telemetry + citizen signal" },
+  "/map": { title: "World Map", sub: "Pan, zoom & explore — CivicPulse layers on the full globe" },
   "/alerts": { title: "Live Alerts & Anomaly Detection", sub: "AI-flagged deviations across health, transit, environment" },
   "/analytics": { title: "Data Analytics", sub: "Deep dives on trends, forecasts, and cross-sector correlations" },
   "/feedback": { title: "Community Intelligence Hub", sub: "Unstructured citizen signal, transformed into action" },
@@ -16,6 +17,7 @@ const titles: Record<string, { title: string; sub: string }> = {
 
 const mobileNav: Array<{ to: string; label: string; icon: typeof Activity; exact?: boolean; hint: string }> = [
   { to: "/", label: "Dashboard", icon: Activity, exact: true, hint: "Real-time city vitals" },
+  { to: "/map", label: "World Map", icon: Globe2, hint: "Full pan & zoom" },
   { to: "/alerts", label: "Live Alerts", icon: AlertTriangle, hint: "AI-flagged anomalies" },
   { to: "/analytics", label: "Data Analytics", icon: BarChart3, hint: "Forecasts & trends" },
   { to: "/feedback", label: "Community Feedback", icon: MessageSquareText, hint: "Citizen sentiment" },

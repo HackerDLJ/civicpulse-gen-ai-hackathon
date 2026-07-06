@@ -13,13 +13,13 @@ const titles: Record<string, { title: string; sub: string }> = {
   "/assistant": { title: "AI Decision Assistant", sub: "Ask anything · Gemini-powered municipal reasoning" },
 };
 
-const mobileNav = [
+const mobileNav: Array<{ to: string; label: string; icon: typeof Activity; exact?: boolean; hint: string }> = [
   { to: "/", label: "Dashboard", icon: Activity, exact: true, hint: "Real-time city vitals" },
   { to: "/alerts", label: "Live Alerts", icon: AlertTriangle, hint: "AI-flagged anomalies" },
   { to: "/analytics", label: "Data Analytics", icon: BarChart3, hint: "Forecasts & trends" },
   { to: "/feedback", label: "Community Feedback", icon: MessageSquareText, hint: "Citizen sentiment" },
   { to: "/assistant", label: "AI Decision Assistant", icon: Sparkles, hint: "Gemini reasoning" },
-] as const;
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });

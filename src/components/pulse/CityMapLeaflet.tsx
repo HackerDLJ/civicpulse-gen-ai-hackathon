@@ -192,7 +192,7 @@ export default function CityMapInner() {
         {(Object.keys(layerMeta) as LayerKey[]).map((k) => {
           const m = layerMeta[k];
           const on = layers[k];
-          const count = hotspots.filter((h) => h.layer === k).length;
+          const count = allHotspots.filter((h) => h.layer === k).length;
           const Icon = m.icon;
           return (
             <button

@@ -20,6 +20,7 @@ const sentimentTone: Record<string, string> = {
 
 function FeedbackPage() {
   const feedback = useStore((s) => s.feedback);
+  const hydrated = useHydrated(500);
   const [tab, setTab] = useState<"all" | "Positive" | "Negative" | "Neutral">("all");
   const rows = useMemo(() => tab === "all" ? feedback : feedback.filter((f) => f.sentiment === tab), [feedback, tab]);
 

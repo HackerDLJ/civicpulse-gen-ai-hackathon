@@ -350,6 +350,7 @@ function AssistantPage() {
   const [activeId, setActiveId] = useState<string>("");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [assistantError, setAssistantError] = useState<null | { kind: "auth" | "server" | "unknown"; message: string; prompt: string }>(null);
   const [hydrated, setHydrated] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const runGemini = useServerFn(askGemini);
@@ -396,6 +397,7 @@ function AssistantPage() {
     }));
     setInput("");
     setBusy(true);
+    setAssistantError(null);
 
     try {
       const raw = await runGemini({ data: { prompt: trimmed, context: liveContext || undefined } });
@@ -407,7 +409,11 @@ function AssistantPage() {
       }, 900);
     } catch (err) {
       setBusy(false);
-      toast.error("Gemini call failed", { description: err instanceof Error ? err.message : "Unknown error" });
+      const message = err instanceof Error ? err.message : "Unknown error";
+      const kind: "auth" | "server" | "unknown" =
+        /401|unauthor/i.test(message) ? "auth" : /5\d\d|server|timeout|fetch/i.test(message) ? "server" : "unknown";
+      setAssistantError({ kind, message, prompt: trimmed });
+      toast.error("Gemini call failed", { description: message });
     }
   }
 
@@ -558,6 +564,47 @@ function AssistantPage() {
             ))}
             {busy && messages[messages.length - 1]?.role === "user" && (
               <AiThinkingSkeleton />
+            )}
+            {assistantError && (
+              <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 animate-rise">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-rose-500/20 grid place-items-center shrink-0">
+                    <Zap className="h-4 w-4 text-rose-300" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-rose-100">
+                      {assistantError.kind === "auth"
+                        ? "Your session expired"
+                        : assistantError.kind === "server"
+                          ? "The assistant is temporarily unavailable"
+                          : "The assistant couldn't answer"}
+                    </div>
+                    <div className="mt-1 text-xs text-rose-100/80 leading-relaxed">
+                      {assistantError.kind === "auth"
+                        ? "The server rejected the request as unauthorized. You can retry anonymously — no sign-in is required for /assistant."
+                        : assistantError.kind === "server"
+                          ? "Gemini or the server returned an error while processing your prompt. This is usually transient — please retry in a moment."
+                          : "Something went wrong while reaching the model."}
+                    </div>
+                    <div className="mt-1 text-[10px] text-rose-200/60 font-mono truncate">{assistantError.message}</div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={() => { const p = assistantError.prompt; setAssistantError(null); ask(p); }}
+                        disabled={busy}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground text-xs px-3 py-1.5 disabled:opacity-40 hover:brightness-110 transition"
+                      >
+                        <RotateCw className="h-3 w-3" /> Retry
+                      </button>
+                      <button
+                        onClick={() => setAssistantError(null)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-surface-2/60 transition"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
             <div ref={endRef} />
           </div>

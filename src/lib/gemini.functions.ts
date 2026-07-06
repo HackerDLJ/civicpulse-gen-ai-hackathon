@@ -1,6 +1,9 @@
 // Server-side Gemini 1.5 call. Keeps GEMINI_API_KEY off the browser.
+// Auth is OPTIONAL: signed-in callers get a higher token budget; anonymous
+// callers (public /assistant route) fall back to a safe default config.
 import { createServerFn } from "@tanstack/react-start";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { optionalSupabaseAuth } from "@/lib/auth-optional";
 
 type AskInput = { prompt: string; context?: string };
 
@@ -8,6 +11,7 @@ const MAX_PROMPT_CHARS = 2000;
 const MAX_CONTEXT_CHARS = 4000;
 
 export const askGemini = createServerFn({ method: "POST" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((data: unknown): AskInput => {
     if (!data || typeof data !== "object") throw new Error("Invalid input");
     const d = data as Record<string, unknown>;
@@ -20,14 +24,20 @@ export const askGemini = createServerFn({ method: "POST" })
     const context = rawCtx.length > MAX_CONTEXT_CHARS ? rawCtx.slice(0, MAX_CONTEXT_CHARS) : rawCtx;
     return { prompt, context: context || undefined };
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY is not configured on the server.");
 
+    const isAuthed = context?.isAuthenticated ?? false;
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
-      generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
+      generationConfig: {
+        responseMimeType: "application/json",
+        // Anonymous callers get a slightly more conservative default.
+        temperature: isAuthed ? 0.4 : 0.3,
+        maxOutputTokens: isAuthed ? 1024 : 512,
+      },
     });
 
     const system = `You are CivicPulse, a municipal-ops AI grounded in real-time Google Maps Platform telemetry.

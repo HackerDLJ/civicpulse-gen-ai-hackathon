@@ -23,9 +23,9 @@ export function useLiveHotspots() {
 // ---------- Alert derivation ----------
 
 /**
- * Derive live-alert rows from the current Google hotspot set. Anything with
- * severity Critical or High is elevated into the Live Alerts feed so the
- * anomaly pipeline reacts to real AQI/pollen/heat readings even before
+ * Derive live-alert rows from the current Google hotspot set. Critical, High,
+ * and Medium severities are elevated into the Live Alerts feed so the anomaly
+ * pipeline reacts to real AQI/pollen/heat/traffic readings even before
  * anything lands in Firestore.
  */
 export function deriveGoogleAlerts(result: LiveHotspotsResult | undefined): Alert[] {
@@ -34,13 +34,15 @@ export function deriveGoogleAlerts(result: LiveHotspotsResult | undefined): Aler
   const ageMin = Math.max(0, Math.round((Date.now() - fetched) / 60000));
   const ts = ageMin === 0 ? "just now" : ageMin < 60 ? `${ageMin}m ago` : `${Math.floor(ageMin / 60)}h ${ageMin % 60}m ago`;
 
+  const sevMap = { Critical: "critical", High: "high", Medium: "medium" } as const;
+
   return result.hotspots
-    .filter((h) => h.severity === "Critical" || h.severity === "High")
+    .filter((h): h is LiveHotspot & { severity: keyof typeof sevMap } => h.severity in sevMap)
     .map<Alert>((h) => ({
       id: `google-${h.id}`,
       title: googleAlertTitle(h),
       detail: `Google Maps live signal · ${h.metric} = ${h.value}. ${h.detail}`,
-      severity: h.severity === "Critical" ? "critical" : "high",
+      severity: sevMap[h.severity],
       sector: h.sector,
       ts,
       ageMin,
@@ -53,6 +55,7 @@ function googleAlertTitle(h: LiveHotspot): string {
   if (h.id.startsWith("aq-")) return `AQI ${h.value} anomaly · ${h.sector}`;
   if (h.id.startsWith("pl-")) return `Pollen UPI ${h.value} spike · ${h.sector}`;
   if (h.id.startsWith("wx-")) return `Heat stress ${h.value} · ${h.sector}`;
+  if (h.id.startsWith("tr-")) return `Traffic congestion · ${h.sector}`;
   return `${h.title} · ${h.sector}`;
 }
 

@@ -303,6 +303,9 @@ function AlertsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={cn("text-[10px] font-semibold tracking-widest px-1.5 py-0.5 rounded border", s.ring, s.text)}>{s.label}</span>
+                        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded border inline-flex items-center gap-1", catLabel[a.category].tone)}>
+                          <Icon className="h-3 w-3" /> {catLabel[a.category].text}
+                        </span>
                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{a.sector}</span>
                         <span className="text-[10px] text-muted-foreground">· {a.ts}</span>
                         {isGoogleDerived && (

@@ -64,7 +64,9 @@ function FeedbackPage() {
         </div>
 
         <div className="mt-4 overflow-x-auto">
+          {!hydrated ? <TableSkeleton rows={6} cols={7} /> : (
           <table className="w-full text-sm">
+
             <thead>
               <tr className="text-[10px] uppercase tracking-widest text-muted-foreground border-b border-border">
                 <th className="text-left py-2 pr-3 font-medium">Source</th>

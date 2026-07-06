@@ -223,12 +223,11 @@ export default function CityMapInner() {
   // ---------- Service status banner ----------
   const serviceStatuses: Array<{ key: ServiceKey; state: "ok" | "warn" | "error" | "loading"; label: string; hint?: string }> = useMemo(() => {
     const list: Array<{ key: ServiceKey; state: "ok" | "warn" | "error" | "loading"; label: string; hint?: string }> = [];
+    const apiKeys = ["airQuality", "pollen", "weather"] as const;
     if (isLoading && !services) {
-      (["airQuality", "pollen", "weather"] as ServiceKey[]).forEach((k) =>
-        list.push({ key: k, state: "loading", label: serviceMeta[k].label, hint: "Fetching…" }),
-      );
+      apiKeys.forEach((k) => list.push({ key: k, state: "loading", label: serviceMeta[k].label, hint: "Fetching…" }));
     } else if (services) {
-      (["airQuality", "pollen", "weather"] as ServiceKey[]).forEach((k) => {
+      apiKeys.forEach((k) => {
         const s = services[k];
         const state: "ok" | "warn" | "error" = s.failed === 0 ? "ok" : s.succeeded > 0 ? "warn" : "error";
         list.push({

@@ -17,7 +17,7 @@ export const askGemini = createServerFn({ method: "POST" })
 
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.0-flash",
       generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
     });
 

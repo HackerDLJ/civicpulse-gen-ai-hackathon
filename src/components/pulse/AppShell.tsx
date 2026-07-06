@@ -157,8 +157,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             </div>
 
-            <nav className="px-3 flex flex-col gap-0.5">
-              <div className="px-2 pb-1 text-[10px] uppercase tracking-widest text-muted-foreground/70">Operations</div>
+            <nav className="px-3 flex flex-col gap-1 overflow-y-auto">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground/70">Operations</div>
               {mobileNav.map((n) => {
                 const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
                 const Icon = n.icon;
@@ -168,16 +168,33 @@ export function AppShell({ children }: { children: ReactNode }) {
                     to={n.to}
                     onClick={() => setDrawerOpen(false)}
                     className={cn(
-                      "group flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all",
+                      "group relative flex items-center gap-3 rounded-lg pl-3.5 pr-3 py-2.5 text-sm transition-all",
                       active
-                        ? "bg-gradient-to-r from-indigo-neon/20 to-teal-neon/10 text-foreground neon-ring-indigo"
+                        ? "bg-gradient-to-r from-indigo-neon/20 via-indigo-neon/10 to-transparent text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
                     )}
+                    aria-current={active ? "page" : undefined}
                   >
-                    <Icon className={cn("h-4 w-4 shrink-0", active && "text-indigo-neon")} />
+                    {/* Active left indicator */}
+                    <span
+                      className={cn(
+                        "absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full transition-all",
+                        active ? "bg-gradient-to-b from-indigo-neon to-teal-neon opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "grid place-items-center h-8 w-8 rounded-md transition-colors shrink-0",
+                        active
+                          ? "bg-indigo-neon/15 text-indigo-neon"
+                          : "bg-sidebar-accent/40 text-muted-foreground group-hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block truncate">{n.label}</span>
-                      <span className="block text-[10px] text-muted-foreground/70 truncate">{n.hint}</span>
+                      <span className={cn("block truncate leading-tight", active && "font-medium")}>{n.label}</span>
+                      <span className="block text-[10.5px] text-muted-foreground/70 truncate leading-tight mt-0.5">{n.hint}</span>
                     </span>
                     {active && <span className="h-1.5 w-1.5 rounded-full bg-indigo-neon pulse-dot shrink-0" />}
                   </Link>

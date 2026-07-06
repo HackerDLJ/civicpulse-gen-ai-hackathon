@@ -3,7 +3,7 @@
 // callers (public /assistant route) fall back to a safe default config.
 import { createServerFn } from "@tanstack/react-start";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { optionalSupabaseAuth } from "@/lib/auth-optional";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type AskInput = { prompt: string; context?: string };
 
@@ -11,7 +11,7 @@ const MAX_PROMPT_CHARS = 2000;
 const MAX_CONTEXT_CHARS = 4000;
 
 export const askGemini = createServerFn({ method: "POST" })
-  .middleware([optionalSupabaseAuth])
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown): AskInput => {
     if (!data || typeof data !== "object") throw new Error("Invalid input");
     const d = data as Record<string, unknown>;
@@ -28,15 +28,13 @@ export const askGemini = createServerFn({ method: "POST" })
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY is not configured on the server.");
 
-    const isAuthed = context?.isAuthenticated ?? false;
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
       generationConfig: {
         responseMimeType: "application/json",
-        // Anonymous callers get a slightly more conservative default.
-        temperature: isAuthed ? 0.4 : 0.3,
-        maxOutputTokens: isAuthed ? 1024 : 512,
+        temperature: 0.4,
+        maxOutputTokens: 1024,
       },
     });
 

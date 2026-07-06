@@ -4,6 +4,7 @@
 // per-ward metric snapshots and per-service success/failure status so the UI
 // can surface exactly which Google services failed and retry them.
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
 
@@ -272,7 +273,7 @@ function recordStatus(s: ServiceStatus, outcome: FetchOutcome, sector: string) {
   }
 }
 
-export const getLiveHotspots = createServerFn({ method: "GET" }).handler(async (): Promise<LiveHotspotsResult> => {
+export const getLiveHotspots = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async (): Promise<LiveHotspotsResult> => {
   const airQuality = emptyStatus();
   const pollen = emptyStatus();
   const weather = emptyStatus();
@@ -379,7 +380,7 @@ async function fetchWardReviews(p: typeof POINTS[number]): Promise<{ reviews: Go
   }
 }
 
-export const getGoogleCommunityFeedback = createServerFn({ method: "GET" }).handler(async () => {
+export const getGoogleCommunityFeedback = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async () => {
   const status: ServiceStatus = { ok: true, attempted: 0, succeeded: 0, failed: 0, errors: [] };
   const reviews: GoogleCommunityReview[] = [];
   const tasks = POINTS.map(async (p) => {

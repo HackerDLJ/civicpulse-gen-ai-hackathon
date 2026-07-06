@@ -10,10 +10,10 @@ export const LIVE_HOTSPOTS_KEY = ["live-hotspots"] as const;
 
 export function useLiveHotspots() {
   const fetchLive = useServerFn(getLiveHotspots);
-  return useQuery({
+  return useQuery<LiveHotspotsResult>({
     queryKey: LIVE_HOTSPOTS_KEY,
-    queryFn: () => fetchLive(),
-    refetchInterval: 5 * 60 * 1000, // refresh every 5 min
+    queryFn: () => fetchLive() as Promise<LiveHotspotsResult>,
+    refetchInterval: 5 * 60 * 1000,
     staleTime: 60 * 1000,
     retry: 2,
     retryDelay: (n) => Math.min(30_000, 2 ** n * 1000),

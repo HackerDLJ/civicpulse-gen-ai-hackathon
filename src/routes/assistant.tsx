@@ -398,7 +398,7 @@ function AssistantPage() {
     setBusy(true);
 
     try {
-      const raw = await runGemini({ data: { prompt: trimmed } });
+      const raw = await runGemini({ data: { prompt: trimmed, context: liveContext || undefined } });
       const ans: Answer = { ...raw, actions: raw.actions ?? [] };
       updateActive((c) => ({ ...c, messages: [...c.messages, { id: aid, role: "ai", answer: ans, ts: Date.now(), streaming: true }] }));
       setTimeout(() => {
@@ -424,7 +424,7 @@ function AssistantPage() {
     try {
       const existing = active.messages.find((m) => m.id === aiMsgId);
       const regenCount = existing && existing.role === "ai" ? (existing.regenerated ?? 0) + 1 : 1;
-      const raw = await runGemini({ data: { prompt: prev.text } });
+      const raw = await runGemini({ data: { prompt: prev.text, context: liveContext || undefined } });
       const ans: Answer = { ...raw, actions: raw.actions ?? [] };
       updateActive((c) => ({
         ...c,

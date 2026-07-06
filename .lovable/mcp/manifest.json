@@ -264,7 +264,58 @@
             "prompt"
           ]
         },
-        "outputSchema": null
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "type": "object",
+              "properties": {
+                "headline": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "bullets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "h": {
+                        "type": "string"
+                      },
+                      "t": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "h",
+                      "t"
+                    ]
+                  }
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "headline",
+                "confidence",
+                "bullets",
+                "actions"
+              ]
+            }
+          },
+          "required": [
+            "answer"
+          ]
+        }
       }
     ]
   }

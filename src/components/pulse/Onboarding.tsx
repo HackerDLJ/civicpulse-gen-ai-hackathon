@@ -76,7 +76,8 @@ export function Onboarding() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      if (!window.localStorage.getItem(KEY)) setOpen(true);
+      const seen = window.localStorage.getItem(KEY) || window.sessionStorage.getItem(KEY);
+      if (!seen) setOpen(true);
     } catch {
       /* ignore */
     }
@@ -139,7 +140,7 @@ export function Onboarding() {
   }
 
   function skipForNow() {
-    // Do NOT persist the "seen" flag — will resurface on next full session.
+    try { window.sessionStorage.setItem(KEY, "1"); } catch { /* ignore */ }
     setOpen(false);
     toast("Tour paused — resume any time from the Tour button in the header.");
   }

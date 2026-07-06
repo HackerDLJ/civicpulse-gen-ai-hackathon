@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/assistant")({
-  head: () => ({ meta: [{ title: "AI Decision Assistant · Pulse" }, { name: "description", content: "Ask anything about your city. Gemini-powered municipal reasoning." }] }),
+  head: () => ({ meta: [{ title: "AI Decision Assistant · CivicPulse" }, { name: "description", content: "Ask anything about your city. Gemini-powered municipal reasoning." }] }),
   component: AssistantPage,
 });
 
@@ -305,7 +305,7 @@ function AnswerCard({ m, onRegenerate }: { m: Extract<Msg, { role: "ai" }>; onRe
 
 function exportTranscriptMarkdown(c: Conversation) {
   const lines: string[] = [];
-  lines.push(`# Pulse Decision Assistant · Transcript`);
+  lines.push(`# CivicPulse Decision Assistant · Transcript`);
   lines.push(`**Session:** ${c.title}`);
   lines.push(`**Started:** ${new Date(c.createdAt).toISOString()}`);
   lines.push(`**Exchanges:** ${c.messages.length}`);
@@ -318,7 +318,7 @@ function exportTranscriptMarkdown(c: Conversation) {
       lines.push("");
     } else {
       const a = m.answer;
-      lines.push(`## 🤖 Pulse AI · ${ts} · ${a.confidence}% confidence`);
+      lines.push(`## 🤖 CivicPulse AI · ${ts} · ${a.confidence}% confidence`);
       lines.push(`**${a.headline}**`);
       lines.push("");
       for (const b of a.bullets) lines.push(`- **${b.h}:** ${b.t}`);
@@ -332,7 +332,7 @@ function exportTranscriptMarkdown(c: Conversation) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `pulse-transcript-${c.id}.md`;
+  link.download = `civicpulse-transcript-${c.id}.md`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -521,7 +521,7 @@ function AssistantPage() {
                     <Sparkles className="h-6 w-6 text-primary-foreground" />
                   </div>
                   <div className="mt-4 text-xl font-semibold tracking-tight">Ask anything about your city</div>
-                  <div className="mt-1 text-sm text-muted-foreground">Pulse fuses 42 live data layers with Gemini to surface decisions, not just dashboards. Try a prompt on the right, or type your own.</div>
+                  <div className="mt-1 text-sm text-muted-foreground">CivicPulse fuses 42 live data layers with Gemini to surface decisions, not just dashboards. Try a prompt on the right, or type your own.</div>
                 </div>
               </div>
             )}
@@ -550,7 +550,7 @@ function AssistantPage() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Pulse anything — 'How's Ward 3 trending?'"
+                placeholder="Ask CivicPulse anything — 'How's Ward 3 trending?'"
                 className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
               />
               <button type="submit" disabled={!input.trim() || busy} className="grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground disabled:opacity-40 hover:brightness-110 transition">

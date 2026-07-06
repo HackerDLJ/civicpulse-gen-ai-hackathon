@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/feedback")({
-  head: () => ({ meta: [{ title: "Community Feedback · Pulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),
+  head: () => ({ meta: [{ title: "Community Feedback · CivicPulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),
   component: FeedbackPage,
 });
 

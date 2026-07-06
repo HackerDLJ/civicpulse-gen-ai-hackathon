@@ -19,7 +19,7 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-gradient-brand">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Signal lost</h2>
-        <p className="mt-2 text-sm text-muted-foreground">This telemetry endpoint doesn't exist in the Pulse grid.</p>
+        <p className="mt-2 text-sm text-muted-foreground">This telemetry endpoint doesn't exist in the CivicPulse grid.</p>
         <div className="mt-6">
           <Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
             Return to command center
@@ -58,9 +58,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Pulse · Smart City & Community Health Intelligence" },
-      { name: "description", content: "Pulse fuses live city telemetry, citizen signal, and Gemini reasoning into decisions for modern municipal operators." },
-      { property: "og:title", content: "Pulse · Smart City & Community Health Intelligence" },
+      { title: "CivicPulse · Smart City & Community Health Intelligence" },
+      { name: "description", content: "CivicPulse fuses live city telemetry, citizen signal, and Gemini reasoning into decisions for modern municipal operators." },
+      { property: "og:title", content: "CivicPulse · Smart City & Community Health Intelligence" },
       { property: "og:description", content: "Real-time civic operations powered by generative AI." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

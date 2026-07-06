@@ -7,7 +7,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/analytics")({
-  head: () => ({ meta: [{ title: "Data Analytics · Pulse" }, { name: "description", content: "Cross-sector trends, forecasts, and resource allocation intelligence." }] }),
+  head: () => ({ meta: [{ title: "Data Analytics · CivicPulse" }, { name: "description", content: "Cross-sector trends, forecasts, and resource allocation intelligence." }] }),
   component: AnalyticsPage,
 });
 

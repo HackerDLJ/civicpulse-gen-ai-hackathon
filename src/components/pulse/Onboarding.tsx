@@ -139,7 +139,7 @@ export function Onboarding() {
   }
 
   function skipForNow() {
-    // Do NOT persist the "seen" flag — will resurface on next full session.
+    try { window.sessionStorage.setItem(KEY, "1"); } catch { /* ignore */ }
     setOpen(false);
     toast("Tour paused — resume any time from the Tour button in the header.");
   }

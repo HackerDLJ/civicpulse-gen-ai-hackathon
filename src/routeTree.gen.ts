@@ -11,8 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MapRouteImport } from './routes/map'
-import { Route as HeroRouteImport } from './routes/hero'
 import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AlertsRouteImport } from './routes/alerts'
@@ -31,14 +31,14 @@ const MapRoute = MapRouteImport.update({
   path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeroRoute = HeroRouteImport.update({
-  id: '/hero',
-  path: '/hero',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FeedbackRoute = FeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssistantRoute = AssistantRouteImport.update({
@@ -85,8 +85,8 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
   '/assistant': typeof AssistantRoute
+  '/dashboard': typeof DashboardRoute
   '/feedback': typeof FeedbackRoute
-  '/hero': typeof HeroRoute
   '/map': typeof MapRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -98,8 +98,8 @@ export interface FileRoutesByTo {
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
   '/assistant': typeof AssistantRoute
+  '/dashboard': typeof DashboardRoute
   '/feedback': typeof FeedbackRoute
-  '/hero': typeof HeroRoute
   '/map': typeof MapRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -112,8 +112,8 @@ export interface FileRoutesById {
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
   '/assistant': typeof AssistantRoute
+  '/dashboard': typeof DashboardRoute
   '/feedback': typeof FeedbackRoute
-  '/hero': typeof HeroRoute
   '/map': typeof MapRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -127,8 +127,8 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/analytics'
     | '/assistant'
+    | '/dashboard'
     | '/feedback'
-    | '/hero'
     | '/map'
     | '/mcp'
     | '/.mcp/list-tools'
@@ -140,8 +140,8 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/analytics'
     | '/assistant'
+    | '/dashboard'
     | '/feedback'
-    | '/hero'
     | '/map'
     | '/mcp'
     | '/.mcp/list-tools'
@@ -153,8 +153,8 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/analytics'
     | '/assistant'
+    | '/dashboard'
     | '/feedback'
-    | '/hero'
     | '/map'
     | '/mcp'
     | '/.mcp/list-tools'
@@ -167,8 +167,8 @@ export interface RootRouteChildren {
   AlertsRoute: typeof AlertsRoute
   AnalyticsRoute: typeof AnalyticsRoute
   AssistantRoute: typeof AssistantRoute
+  DashboardRoute: typeof DashboardRoute
   FeedbackRoute: typeof FeedbackRoute
-  HeroRoute: typeof HeroRoute
   MapRoute: typeof MapRoute
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -192,18 +192,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/hero': {
-      id: '/hero'
-      path: '/hero'
-      fullPath: '/hero'
-      preLoaderRoute: typeof HeroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/feedback': {
       id: '/feedback'
       path: '/feedback'
       fullPath: '/feedback'
       preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assistant': {
@@ -263,8 +263,8 @@ const rootRouteChildren: RootRouteChildren = {
   AlertsRoute: AlertsRoute,
   AnalyticsRoute: AnalyticsRoute,
   AssistantRoute: AssistantRoute,
+  DashboardRoute: DashboardRoute,
   FeedbackRoute: FeedbackRoute,
-  HeroRoute: HeroRoute,
   MapRoute: MapRoute,
   McpRoute: McpRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,

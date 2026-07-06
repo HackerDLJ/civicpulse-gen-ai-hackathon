@@ -63,11 +63,11 @@ function HeroPage() {
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">City Intelligence</div>
           </div>
           <div className="flex-1" />
-          <Link to="/" className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition">
+          <Link to="/dashboard" className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition">
             Skip intro <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <Link
-            to="/"
+            to="/dashboard"
             className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground text-xs font-medium shadow-lg shadow-indigo-neon/20 hover:brightness-110 transition"
           >
             Enter console <ArrowRight className="h-3.5 w-3.5" />
@@ -113,7 +113,7 @@ function HeroPage() {
           {/* Primary + secondary CTA */}
           <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-3">
             <Link
-              to="/"
+              to="/dashboard"
               className="group relative inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-gradient-to-r from-indigo-neon via-primary to-teal-neon text-primary-foreground text-sm font-semibold tracking-tight shadow-[0_10px_40px_-10px_oklch(0.74_0.16_268/0.55)] hover:brightness-110 hover:shadow-[0_16px_50px_-10px_oklch(0.74_0.16_268/0.7)] transition-all"
             >
               <span className="absolute inset-0 rounded-xl ring-1 ring-white/10 pointer-events-none" />
@@ -213,7 +213,7 @@ function HeroPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                to="/"
+                to="/dashboard"
                 className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground text-sm font-medium shadow-xl shadow-indigo-neon/25 hover:brightness-110 transition"
               >
                 Enter console <ArrowRight className="h-4 w-4" />
@@ -233,7 +233,7 @@ function HeroPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <div>© {new Date().getFullYear()} CivicPulse · City Intelligence</div>
           <div className="flex items-center gap-4">
-            <Link to="/" className="hover:text-foreground">Dashboard</Link>
+            <Link to="/dashboard" className="hover:text-foreground">Dashboard</Link>
             <Link to="/alerts" className="hover:text-foreground">Alerts</Link>
             <Link to="/analytics" className="hover:text-foreground">Analytics</Link>
             <Link to="/feedback" className="hover:text-foreground">Feedback</Link>

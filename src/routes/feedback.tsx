@@ -144,6 +144,20 @@ function FeedbackPage() {
   const [category, setCategory] = useState<string>("all");
   const [q, setQ] = useState("");
 
+  // Live Google community feedback stream feeds the top KPI counts so they
+  // reflect BOTH the operator-side Firestore feedback and the citizen-facing
+  // Google Maps reviews shown below. Kept as a shared query key so the panel
+  // and the KPI row read from the same cache entry.
+  const fetchGoogle = useServerFn(getGoogleCommunityFeedback);
+  const { data: googleFeedback } = useQuery({
+    queryKey: ["google-community-feedback"],
+    queryFn: () => fetchGoogle(),
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
+    retry: 2,
+  });
+  const googleReviews = googleFeedback?.reviews ?? [];
+
   // Live-derived filter option lists — recompute whenever the Firestore snapshot changes.
   const wards = useMemo(
     () => Array.from(new Set(feedback.map((f) => f.ward).filter(Boolean))).sort(),
@@ -174,10 +188,10 @@ function FeedbackPage() {
   const resetFilters = () => { setTab("all"); setWard("all"); setCategory("all"); setQ(""); };
 
   const counts = {
-    total: feedback.length,
-    positive: feedback.filter((f) => f.sentiment === "Positive").length,
-    negative: feedback.filter((f) => f.sentiment === "Negative").length,
-    neutral: feedback.filter((f) => f.sentiment === "Neutral").length,
+    total: feedback.length + googleReviews.length,
+    positive: feedback.filter((f) => f.sentiment === "Positive").length + googleReviews.filter((r) => r.sentiment === "Positive").length,
+    negative: feedback.filter((f) => f.sentiment === "Negative").length + googleReviews.filter((r) => r.sentiment === "Negative").length,
+    neutral:  feedback.filter((f) => f.sentiment === "Neutral").length  + googleReviews.filter((r) => r.sentiment === "Neutral").length,
   };
 
   return (
@@ -192,11 +206,16 @@ function FeedbackPage() {
           <div key={s.l} className="glass-panel rounded-xl px-4 py-3">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{s.l}</div>
             <div className={cn("text-2xl font-semibold mt-1", s.tone)}>{s.v}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              {feedback.length} Firestore · {googleReviews.length} Google
+            </div>
           </div>
         ))}
       </div>
 
       <GoogleCommunityPanel />
+
+
 
       <div className="mt-6 glass-panel rounded-2xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

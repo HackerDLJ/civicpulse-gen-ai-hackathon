@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/pulse/AppShell";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Sparkles, Send, User, Zap, ChevronRight, Radio, TrendingUp, Plus, Trash2, Download, RotateCw, MessageSquare, Copy } from "lucide-react";
@@ -6,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AiThinkingSkeleton } from "@/components/pulse/Skeletons";
+import { askGemini } from "@/lib/gemini.functions";
 
 export const Route = createFileRoute("/assistant")({
   head: () => ({ meta: [{ title: "AI Decision Assistant · CivicPulse" }, { name: "description", content: "Ask anything about your city. Gemini-powered municipal reasoning." }] }),

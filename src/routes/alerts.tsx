@@ -249,7 +249,22 @@ function AlertsPage() {
         </div>
       </div>
 
+      <div className="mt-4 mb-3 glass-panel rounded-xl px-3 py-2 text-[11px] flex flex-wrap items-center gap-2">
+        <Radio className={cn("h-3.5 w-3.5", liveFetching ? "text-indigo-neon animate-pulse" : "text-teal-neon")} />
+        <span className="text-muted-foreground">Anomaly pipeline · fused Firestore + Google Maps live signals</span>
+        <span className="ml-auto flex flex-wrap items-center gap-2">
+          <span className="px-1.5 py-0.5 rounded border border-teal-neon/40 bg-teal-neon/10 text-teal-neon">
+            {googleAlerts.length} live from Google
+          </span>
+          <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground">
+            {firestoreAlerts.length} from Firestore
+          </span>
+          {liveFetching && <span className="text-indigo-neon">refreshing…</span>}
+        </span>
+      </div>
+
       <div className="mt-4 space-y-3">
+
         {loading ? (
           <ListSkeleton rows={4} />
         ) : error ? (

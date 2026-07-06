@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
-import { useStore, store, type Alert } from "@/lib/pulse-data";
+import { type Alert } from "@/lib/pulse-data";
+import { useFirestoreAlerts, updateAlertStatus } from "@/lib/firestore-hooks";
 import { AlertTriangle, Zap, Check, Filter, ShieldAlert, Activity, Droplet, Car, Wind, RotateCcw, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
-import { ListSkeleton, useHydrated, EmptyState } from "@/components/pulse/Skeletons";
+import { ListSkeleton, EmptyState, ErrorState } from "@/components/pulse/Skeletons";
 
 type AlertsSearch = {
   sector?: string;
@@ -53,9 +54,9 @@ type Severity = Alert["severity"];
 const severities: Severity[] = ["critical", "high", "medium", "low"];
 
 function AlertsPage() {
-  const alerts = useStore((s) => s.alerts);
+  const { data: alertsData, loading, error } = useFirestoreAlerts();
+  const alerts = alertsData ?? [];
   const search = Route.useSearch();
-  const hydrated = useHydrated(400);
 
   const initialSev = (): Set<Severity> => {
     if (!search.sev) return new Set(severities);
@@ -234,13 +235,25 @@ function AlertsPage() {
       </div>
 
       <div className="mt-4 space-y-3">
-        {!hydrated ? (
+        {loading ? (
           <ListSkeleton rows={4} />
+        ) : error ? (
+          <ErrorState
+            title="Live alerts stream unavailable"
+            hint={`Firestore: ${error}. Check your Firebase config and the "alerts" collection permissions.`}
+            onRetry={() => window.location.reload()}
+          />
+        ) : alerts.length === 0 ? (
+          <EmptyState
+            title="No alerts in Firestore yet"
+            hint={<>The <code>alerts</code> collection is empty. Once documents are added, they will stream in live.</>}
+            icon={<AlertTriangle className="h-5 w-5" />}
+          />
         ) : (
           <>
             {filtered.map((a) => {
-              const s = sevMap[a.severity];
-              const Icon = catIcon[a.category];
+              const s = sevMap[a.severity] ?? sevMap.medium;
+              const Icon = catIcon[a.category] ?? Activity;
               return (
                 <div key={a.id} className={cn("glass-panel rounded-2xl p-4 md:p-5 relative overflow-hidden animate-rise", a.status !== "open" && "opacity-70")}>
                   <div className={cn("absolute left-0 top-0 h-full w-1", s.bar)} />
@@ -262,19 +275,17 @@ function AlertsPage() {
                     <div className="flex gap-2 shrink-0">
                       <button
                         disabled={a.status !== "open"}
-                        onClick={() => {
+                        onClick={async () => {
                           const prev = a.status;
-                          store.automateAlert(a.id);
-                          toast.success("⚡ Automated workflow dispatched", {
-                            description: `${a.title} · ${a.sector}`,
-                            action: {
-                              label: "Undo",
-                              onClick: () => {
-                                store.revertAlert(a.id, prev);
-                                toast("Automation reverted");
-                              },
-                            },
-                          });
+                          try {
+                            await updateAlertStatus(a.id, "automated");
+                            toast.success("⚡ Automated workflow dispatched", {
+                              description: `${a.title} · ${a.sector}`,
+                              action: { label: "Undo", onClick: () => updateAlertStatus(a.id, prev).then(() => toast("Automation reverted")) },
+                            });
+                          } catch (err) {
+                            toast.error("Firestore write failed", { description: err instanceof Error ? err.message : "Unknown error" });
+                          }
                         }}
                         className="text-xs font-medium px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 hover:brightness-110 transition"
                       >
@@ -282,19 +293,17 @@ function AlertsPage() {
                       </button>
                       <button
                         disabled={a.status === "resolved"}
-                        onClick={() => {
+                        onClick={async () => {
                           const prev = a.status;
-                          store.resolveAlert(a.id);
-                          toast.success("Alert marked resolved", {
-                            description: `${a.title} · ${a.sector}`,
-                            action: {
-                              label: "Undo",
-                              onClick: () => {
-                                store.revertAlert(a.id, prev);
-                                toast("Resolution reverted");
-                              },
-                            },
-                          });
+                          try {
+                            await updateAlertStatus(a.id, "resolved");
+                            toast.success("Alert marked resolved", {
+                              description: `${a.title} · ${a.sector}`,
+                              action: { label: "Undo", onClick: () => updateAlertStatus(a.id, prev).then(() => toast("Resolution reverted")) },
+                            });
+                          } catch (err) {
+                            toast.error("Firestore write failed", { description: err instanceof Error ? err.message : "Unknown error" });
+                          }
                         }}
                         className="text-xs px-3 py-2 rounded-lg border border-border hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
                       >

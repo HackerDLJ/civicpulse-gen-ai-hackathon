@@ -165,20 +165,25 @@ export function EmptyState({
   );
 }
 
-/** Row-list skeleton (Alerts, generic feeds). */
+/** Row-list skeleton (Alerts, generic feeds). Premium: shimmering severity rail + chip stack. */
 export function ListSkeleton({ rows = 4 }: { rows?: number }) {
+  const rails = ["bg-rose-neon/60", "bg-amber-neon/60", "bg-teal-neon/60", "bg-emerald-neon/60"];
   return (
     <div className="space-y-3">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="glass-panel rounded-2xl p-4 md:p-5 relative overflow-hidden">
-          <div className="absolute left-0 top-0 h-full w-1 skeleton-block" />
+          <div className={cn("absolute left-0 top-0 h-full w-1 animate-pulse", rails[i % rails.length])} />
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-indigo-neon/5 to-transparent"
+            style={{ animation: "scan 2.4s linear infinite" }}
+          />
           <div className="flex items-center gap-4">
             <Skel className="h-11 w-11 rounded-xl shrink-0" />
             <div className="flex-1 space-y-2 min-w-0">
               <div className="flex gap-2">
-                <Skel className="h-3 w-14" />
-                <Skel className="h-3 w-20" />
-                <Skel className="h-3 w-10" />
+                <Skel className="h-3 w-14 rounded-full" />
+                <Skel className="h-3 w-20 rounded-full" />
+                <Skel className="h-3 w-10 rounded-full" />
               </div>
               <Skel className="h-4 w-3/4" />
               <Skel className="h-3 w-1/2" />
@@ -194,17 +199,34 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
   );
 }
 
-/** Table skeleton for the Feedback grid. */
+/** Table skeleton for the Feedback grid. Premium: sentiment pill placeholders and staggered rows. */
 export function TableSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-teal-neon/5 to-transparent"
+        style={{ animation: "scan 2.8s linear infinite" }}
+      />
       <div className="grid gap-3 border-b border-border pb-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-        {Array.from({ length: cols }).map((_, i) => <Skel key={i} className="h-3 w-16" />)}
+        {Array.from({ length: cols }).map((_, i) => <Skel key={i} className="h-2.5 w-16 rounded-full" />)}
       </div>
       {Array.from({ length: rows }).map((_, r) => (
-        <div key={r} className="grid gap-3 border-b border-border/40 py-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        <div
+          key={r}
+          className="grid gap-3 border-b border-border/40 py-3 items-center"
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, animationDelay: `${r * 90}ms` }}
+        >
           {Array.from({ length: cols }).map((_, c) => (
-            <Skel key={c} className={cn("h-3.5", c === 1 ? "w-full" : c === 5 ? "w-3/4" : "w-2/3")} />
+            <Skel
+              key={c}
+              className={cn(
+                c === 0 ? "h-4 w-16 rounded-full" :
+                c === 2 ? "h-4 w-14 rounded-full" :
+                c === 1 ? "h-3.5 w-full" :
+                c === cols - 1 ? "h-6 w-20 rounded-md" :
+                "h-3.5 w-2/3"
+              )}
+            />
           ))}
         </div>
       ))}

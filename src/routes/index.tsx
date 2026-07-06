@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
-import { useStore, aqiTrend, wardSatisfaction, store, type StreamEvent } from "@/lib/pulse-data";
-import { Activity, Wind, Gauge, Smile, TrendingUp, TrendingDown, MapPin, Layers, Zap, Radio, Car, HeartPulse, X, AlertTriangle, ArrowUpRight } from "lucide-react";
+import { useStore, aqiTrend, store, type StreamEvent, type Alert, type Feedback } from "@/lib/pulse-data";
+import { useFirestoreAlerts, useFirestoreFeedback } from "@/lib/firestore-hooks";
+import { Activity, Wind, Gauge, Smile, TrendingUp, TrendingDown, MapPin, Zap, Radio, X, AlertTriangle, ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { KpiCardSkeleton, MapSkeleton, StreamSkeleton, EmptyState } from "@/components/pulse/Skeletons";
@@ -32,12 +33,15 @@ type KpiDef = {
   up: boolean;
 };
 
-const kpis: KpiDef[] = [
-  { key: "alerts",       label: "Active Safety Alerts",     value: "14",    delta: "-3 vs 24h", icon: Activity, tone: "rose",    trend: [12, 15, 18, 14, 17, 14, 14], up: false },
-  { key: "aqi",          label: "Air Quality Index",         value: "82",    delta: "+6 pts",    icon: Wind,     tone: "teal",    trend: [70, 72, 74, 78, 80, 79, 82], up: true },
-  { key: "resource",     label: "Resource Allocation Eff.",  value: "94.2%", delta: "+1.8%",     icon: Gauge,    tone: "indigo",  trend: [88, 89, 91, 92, 93, 93, 94], up: true },
-  { key: "satisfaction", label: "Citizen Satisfaction",      value: "76%",   delta: "+2.4%",     icon: Smile,    tone: "emerald", trend: [70, 71, 73, 72, 74, 75, 76], up: true },
-];
+// KPI definitions are computed live inside DashboardPage from Firestore streams.
+// `staticKpis` is only used as a placeholder shape reference for the summary map keys.
+type KpiTone = "rose" | "teal" | "indigo" | "emerald";
+const KPI_META: Record<KpiKey, { label: string; icon: typeof Activity; tone: KpiTone }> = {
+  alerts:       { label: "Active Safety Alerts",    icon: Activity, tone: "rose" },
+  aqi:          { label: "Air Quality Index",        icon: Wind,     tone: "teal" },
+  resource:     { label: "Resource Allocation Eff.", icon: Gauge,    tone: "indigo" },
+  satisfaction: { label: "Citizen Satisfaction",     icon: Smile,    tone: "emerald" },
+};
 
 const toneMap = {
   rose: { text: "text-rose-neon", bg: "bg-rose-neon", border: "border-rose-neon/40", soft: "bg-rose-neon/10" },
@@ -387,30 +391,128 @@ function StreamFeed() {
   );
 }
 
+/**
+ * useRollingSeries — captures a value over time (every `intervalMs`) so KPI
+ * sparklines have a real live trend even when Firestore returns a single
+ * snapshot. Kept in-memory per session.
+ */
+function useRollingSeries(value: number, size = 7, intervalMs = 6000): number[] {
+  const [series, setSeries] = useState<number[]>(() => Array.from({ length: size }, () => value));
+  const latest = useRef(value);
+  latest.current = value;
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSeries((prev) => [...prev.slice(1), latest.current]);
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  // Keep the last slot in sync with the live value so the trailing point tracks the current snapshot.
+  return useMemo(() => [...series.slice(0, -1), value], [series, value]);
+}
+
+/** Derive the four dashboard KPIs from the live Firestore alerts + feedback snapshots. */
+function computeLiveKpis(alerts: Alert[], feedback: Feedback[]) {
+  const openAlerts = alerts.filter((a) => a.status === "open").length;
+  const handled = alerts.filter((a) => a.status === "resolved" || a.status === "automated").length;
+  const resourceEff = alerts.length > 0 ? (handled / alerts.length) * 100 : 0;
+
+  const positives = feedback.filter((f) => f.sentiment === "Positive").length;
+  const negatives = feedback.filter((f) => f.sentiment === "Negative").length;
+  const scored = positives + negatives + feedback.filter((f) => f.sentiment === "Neutral").length;
+  // Weighted satisfaction: positives full credit, neutrals half, negatives zero.
+  const satisfaction = scored > 0
+    ? ((positives + (scored - positives - negatives) * 0.5) / scored) * 100
+    : 0;
+
+  // AQI is not sourced from Firestore — hold a derived proxy from environment alerts
+  // so the tile still reacts to live data (each env alert nudges the index up).
+  const envAlerts = alerts.filter((a) => a.category === "environment" && a.status !== "resolved").length;
+  const aqi = Math.min(180, 62 + envAlerts * 9);
+
+  return { openAlerts, resourceEff, satisfaction, aqi };
+}
+
 function DashboardPage() {
   const [drill, setDrill] = useState<KpiKey | null>(null);
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setHydrated(true), 650);
-    return () => clearTimeout(t);
-  }, []);
+  const { data: alertsData, loading: aLoading, error: aError } = useFirestoreAlerts();
+  const { data: feedbackData, loading: fLoading } = useFirestoreFeedback();
+  const alerts = alertsData ?? [];
+  const feedback = feedbackData ?? [];
 
-  const activeKpi = kpis.find((k) => k.key === drill) ?? null;
+  const { openAlerts, resourceEff, satisfaction, aqi } = useMemo(
+    () => computeLiveKpis(alerts, feedback),
+    [alerts, feedback],
+  );
+
+  // Live rolling sparkline buffers (updated every 6s from the current snapshot).
+  const alertsTrend = useRollingSeries(openAlerts);
+  const aqiTrendMini = useRollingSeries(aqi);
+  const resourceTrend = useRollingSeries(Math.round(resourceEff * 10) / 10);
+  const satisfactionTrend = useRollingSeries(Math.round(satisfaction * 10) / 10);
+
+  const delta = (series: number[]) => {
+    if (series.length < 2) return 0;
+    return series[series.length - 1] - series[0];
+  };
+
+  const liveKpis: KpiDef[] = useMemo(() => {
+    const d1 = delta(alertsTrend);
+    const d2 = delta(aqiTrendMini);
+    const d3 = delta(resourceTrend);
+    const d4 = delta(satisfactionTrend);
+    return [
+      { key: "alerts",       ...KPI_META.alerts,       value: String(openAlerts),                delta: `${d1 >= 0 ? "+" : ""}${d1} vs open`,    trend: alertsTrend,       up: d1 <= 0 },
+      { key: "aqi",          ...KPI_META.aqi,          value: String(aqi),                       delta: `${d2 >= 0 ? "+" : ""}${d2} pts`,        trend: aqiTrendMini,      up: d2 <= 0 },
+      { key: "resource",     ...KPI_META.resource,     value: `${resourceEff.toFixed(1)}%`,      delta: `${d3 >= 0 ? "+" : ""}${d3.toFixed(1)}%`, trend: resourceTrend,     up: d3 >= 0 },
+      { key: "satisfaction", ...KPI_META.satisfaction, value: `${Math.round(satisfaction)}%`,    delta: `${d4 >= 0 ? "+" : ""}${d4.toFixed(1)}%`, trend: satisfactionTrend, up: d4 >= 0 },
+    ];
+  }, [openAlerts, aqi, resourceEff, satisfaction, alertsTrend, aqiTrendMini, resourceTrend, satisfactionTrend]);
+
+  const activeKpi = liveKpis.find((k) => k.key === drill) ?? null;
+
+  // Live ward satisfaction derived from Firestore feedback snapshot.
+  const liveWardSatisfaction = useMemo(() => {
+    const groups = new Map<string, { pos: number; neu: number; neg: number }>();
+    for (const f of feedback) {
+      const ward = f.ward || "—";
+      const cur = groups.get(ward) ?? { pos: 0, neu: 0, neg: 0 };
+      if (f.sentiment === "Positive") cur.pos++;
+      else if (f.sentiment === "Negative") cur.neg++;
+      else cur.neu++;
+      groups.set(ward, cur);
+    }
+    return Array.from(groups.entries())
+      .map(([ward, g]) => {
+        const total = g.pos + g.neu + g.neg;
+        const score = total > 0 ? Math.round(((g.pos + g.neu * 0.5) / total) * 100) : 0;
+        return { ward, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+  }, [feedback]);
+
+  const loading = aLoading || fLoading;
 
   return (
     <AppShell>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {hydrated
-          ? kpis.map((k) => (
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)
+          : liveKpis.map((k) => (
               <KpiCard
                 key={k.key}
                 k={k}
                 active={drill === k.key}
                 onClick={() => setDrill(drill === k.key ? null : k.key)}
               />
-            ))
-          : Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)}
+            ))}
       </div>
+
+      {aError && (
+        <div className="mt-3 text-[11px] text-rose-neon/90 glass-panel rounded-lg px-3 py-2 border border-rose-neon/30">
+          Firestore alerts stream error — KPI values reflect last-known snapshot. ({aError})
+        </div>
+      )}
 
       {activeKpi && <KpiSummaryPanel k={activeKpi} onClose={() => setDrill(null)} />}
 
@@ -422,10 +524,11 @@ function DashboardPage() {
               <div className="text-[11px] text-muted-foreground">Traffic congestion · Environmental risk · Healthcare access</div>
             </div>
           </div>
-          {hydrated ? <CityMap /> : <MapSkeleton />}
+          {loading ? <MapSkeleton /> : <CityMap />}
         </div>
-        {hydrated ? <StreamFeed /> : <StreamSkeleton />}
+        {loading ? <StreamSkeleton /> : <StreamFeed />}
       </div>
+
 
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="glass-panel rounded-2xl p-5 xl:col-span-2">
@@ -467,19 +570,25 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <div className="text-sm font-semibold flex items-center gap-2"><Zap className="h-4 w-4 text-indigo-neon" /> Citizen Satisfaction · by Ward</div>
-              <div className="text-[11px] text-muted-foreground">NPS-weighted, rolling 7d</div>
+              <div className="text-[11px] text-muted-foreground">Derived from live Firestore feedback stream ({feedback.length} signals)</div>
             </div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer>
-              <BarChart data={wardSatisfaction}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
-                <XAxis dataKey="ward" stroke="oklch(0.7 0.03 258)" fontSize={10} />
-                <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} />
-                <Tooltip contentStyle={{ background: "oklch(0.22 0.025 260)", border: "1px solid oklch(0.35 0.04 262)", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="score" fill="var(--indigo-neon)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {liveWardSatisfaction.length === 0 ? (
+              <div className="h-full grid place-items-center text-[11px] text-muted-foreground">
+                No feedback in the stream yet — chart will populate as signals arrive.
+              </div>
+            ) : (
+              <ResponsiveContainer>
+                <BarChart data={liveWardSatisfaction}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
+                  <XAxis dataKey="ward" stroke="oklch(0.7 0.03 258)" fontSize={10} />
+                  <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} />
+                  <Tooltip contentStyle={{ background: "oklch(0.22 0.025 260)", border: "1px solid oklch(0.35 0.04 262)", borderRadius: 8, fontSize: 12 }} />
+                  <Bar dataKey="score" fill="var(--indigo-neon)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>

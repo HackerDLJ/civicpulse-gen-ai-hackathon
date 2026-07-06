@@ -196,6 +196,8 @@ function FeedbackPage() {
         ))}
       </div>
 
+      <GoogleCommunityPanel />
+
       <div className="mt-6 glass-panel rounded-2xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

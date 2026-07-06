@@ -192,3 +192,42 @@
   0% { transform: translateY(-100%); }
   100% { transform: translateY(1000%); }
 }
+
+/* ---------- Leaflet / OSM dark theming ---------- */
+.civicpulse-leaflet .leaflet-control-attribution {
+  background: oklch(0.18 0.02 260 / 0.7);
+  color: oklch(0.75 0.03 258);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-top-left-radius: 6px;
+  backdrop-filter: blur(6px);
+}
+.civicpulse-leaflet .leaflet-control-attribution a {
+  color: var(--indigo-neon);
+}
+.civicpulse-leaflet .leaflet-bar,
+.civicpulse-leaflet .leaflet-bar a {
+  background: oklch(0.22 0.025 260 / 0.85);
+  color: oklch(0.9 0.02 258);
+  border-color: oklch(0.32 0.03 262 / 0.6);
+}
+.civicpulse-leaflet .leaflet-bar a:hover {
+  background: oklch(0.28 0.03 262);
+  color: var(--indigo-neon);
+}
+.civicpulse-tooltip {
+  background: oklch(0.18 0.02 260 / 0.92) !important;
+  color: oklch(0.95 0.01 258) !important;
+  border: 1px solid oklch(0.35 0.03 262 / 0.6) !important;
+  box-shadow: 0 4px 20px oklch(0 0 0 / 0.5) !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  border-radius: 6px !important;
+  backdrop-filter: blur(8px);
+}
+.civicpulse-tooltip::before { display: none !important; }
+.civicpulse-marker {
+  filter: drop-shadow(0 0 6px currentColor);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}

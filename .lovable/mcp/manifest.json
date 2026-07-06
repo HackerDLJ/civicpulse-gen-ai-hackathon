@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "civicpulse-mcp",
+      "version": "0.1.0",
+      "title": "CivicPulse MCP"
+    },
+    "tools": [
+      {
+        "name": "list_alerts",
+        "title": "List live civic alerts",
+        "description": "List active CivicPulse alerts from the live Firestore `alerts` collection. Supports filtering by severity, sector, and status so agents can triage the city in real time.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "severity": {
+              "description": "Only return alerts of this severity.",
+              "type": "string",
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "sector": {
+              "description": "Case-insensitive sector name substring, e.g. 'Ward 3'.",
+              "type": "string"
+            },
+            "status": {
+              "description": "Only return alerts in this status.",
+              "type": "string",
+              "enum": [
+                "open",
+                "automated",
+                "resolved"
+              ]
+            },
+            "limit": {
+              "default": 25,
+              "description": "Max alerts to return.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_feedback",
+        "title": "List citizen feedback",
+        "description": "List citizen feedback signals from the live Firestore `feedback` collection, with optional sentiment and ward filters. Useful for summarizing civic sentiment.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "sentiment": {
+              "type": "string",
+              "enum": [
+                "Positive",
+                "Negative",
+                "Neutral"
+              ]
+            },
+            "ward": {
+              "description": "Case-insensitive substring match on ward, e.g. 'Ward 3'.",
+              "type": "string"
+            },
+            "limit": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "ask_civicpulse",
+        "title": "Ask the CivicPulse decision assistant",
+        "description": "Send a natural-language operations question about the city (health, transit, environment, safety, utilities). Returns a structured JSON answer with a headline, confidence, three bullets, and recommended actions — powered by Gemini 1.5 Pro.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 4,
+              "maxLength": 2000,
+              "description": "The operator's question, e.g. 'Where should we deploy mobile clinics tonight?'"
+            }
+          },
+          "required": [
+            "prompt"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

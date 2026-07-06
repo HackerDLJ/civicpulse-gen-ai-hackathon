@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
 import { type Alert } from "@/lib/pulse-data";
 import { useFirestoreAlerts, updateAlertStatus } from "@/lib/firestore-hooks";
-import { AlertTriangle, Zap, Check, Filter, ShieldAlert, Activity, Droplet, Car, Wind, RotateCcw, ChevronDown } from "lucide-react";
+import { useLiveHotspots, deriveGoogleAlerts } from "@/lib/live-hotspots";
+import { AlertTriangle, Zap, Check, Filter, ShieldAlert, Activity, Droplet, Car, Wind, RotateCcw, ChevronDown, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
@@ -55,7 +56,21 @@ const severities: Severity[] = ["critical", "high", "medium", "low"];
 
 function AlertsPage() {
   const { data: alertsData, loading, error } = useFirestoreAlerts();
-  const alerts = alertsData ?? [];
+  const { data: liveData, isFetching: liveFetching } = useLiveHotspots();
+  const firestoreAlerts = alertsData ?? [];
+  const googleAlerts = useMemo(() => deriveGoogleAlerts(liveData), [liveData]);
+  // Merge: Google-derived alerts appear first (they have ageMin=0), then Firestore.
+  // De-dup defensively by id.
+  const alerts = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: Alert[] = [];
+    for (const a of [...googleAlerts, ...firestoreAlerts]) {
+      if (seen.has(a.id)) continue;
+      seen.add(a.id);
+      merged.push(a);
+    }
+    return merged;
+  }, [googleAlerts, firestoreAlerts]);
   const search = Route.useSearch();
 
   const initialSev = (): Set<Severity> => {
@@ -234,7 +249,22 @@ function AlertsPage() {
         </div>
       </div>
 
+      <div className="mt-4 mb-3 glass-panel rounded-xl px-3 py-2 text-[11px] flex flex-wrap items-center gap-2">
+        <Radio className={cn("h-3.5 w-3.5", liveFetching ? "text-indigo-neon animate-pulse" : "text-teal-neon")} />
+        <span className="text-muted-foreground">Anomaly pipeline · fused Firestore + Google Maps live signals</span>
+        <span className="ml-auto flex flex-wrap items-center gap-2">
+          <span className="px-1.5 py-0.5 rounded border border-teal-neon/40 bg-teal-neon/10 text-teal-neon">
+            {googleAlerts.length} live from Google
+          </span>
+          <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground">
+            {firestoreAlerts.length} from Firestore
+          </span>
+          {liveFetching && <span className="text-indigo-neon">refreshing…</span>}
+        </span>
+      </div>
+
       <div className="mt-4 space-y-3">
+
         {loading ? (
           <ListSkeleton rows={4} />
         ) : error ? (
@@ -254,6 +284,7 @@ function AlertsPage() {
             {filtered.map((a) => {
               const s = sevMap[a.severity] ?? sevMap.medium;
               const Icon = catIcon[a.category] ?? Activity;
+              const isGoogleDerived = a.id.startsWith("google-");
               return (
                 <div key={a.id} className={cn("glass-panel rounded-2xl p-4 md:p-5 relative overflow-hidden animate-rise", a.status !== "open" && "opacity-70")}>
                   <div className={cn("absolute left-0 top-0 h-full w-1", s.bar)} />
@@ -266,6 +297,11 @@ function AlertsPage() {
                         <span className={cn("text-[10px] font-semibold tracking-widest px-1.5 py-0.5 rounded border", s.ring, s.text)}>{s.label}</span>
                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{a.sector}</span>
                         <span className="text-[10px] text-muted-foreground">· {a.ts}</span>
+                        {isGoogleDerived && (
+                          <span className="text-[10px] font-semibold text-teal-neon inline-flex items-center gap-1">
+                            <Radio className="h-3 w-3" /> Google Maps live signal
+                          </span>
+                        )}
                         {a.status === "automated" && <span className="text-[10px] font-semibold text-indigo-neon">⚡ Workflow running</span>}
                         {a.status === "resolved" && <span className="text-[10px] font-semibold text-emerald-neon">✓ Resolved</span>}
                       </div>
@@ -274,7 +310,8 @@ function AlertsPage() {
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <button
-                        disabled={a.status !== "open"}
+                        disabled={a.status !== "open" || isGoogleDerived}
+                        title={isGoogleDerived ? "Live Google signal — resolves automatically when the metric clears" : undefined}
                         onClick={async () => {
                           const prev = a.status;
                           try {
@@ -292,7 +329,8 @@ function AlertsPage() {
                         <Zap className="h-3.5 w-3.5" /> Automate
                       </button>
                       <button
-                        disabled={a.status === "resolved"}
+                        disabled={a.status === "resolved" || isGoogleDerived}
+                        title={isGoogleDerived ? "Live Google signal — resolves automatically when the metric clears" : undefined}
                         onClick={async () => {
                           const prev = a.status;
                           try {

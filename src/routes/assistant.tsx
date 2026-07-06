@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AiThinkingSkeleton } from "@/components/pulse/Skeletons";
 import { askGemini } from "@/lib/gemini.functions";
+import { useLiveHotspots, buildAssistantContext } from "@/lib/live-hotspots";
 
 export const Route = createFileRoute("/assistant")({
   head: () => ({ meta: [{ title: "AI Decision Assistant · CivicPulse" }, { name: "description", content: "Ask anything about your city. Gemini-powered municipal reasoning." }] }),
@@ -352,6 +353,8 @@ function AssistantPage() {
   const [hydrated, setHydrated] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const runGemini = useServerFn(askGemini);
+  const { data: liveData, isFetching: liveFetching } = useLiveHotspots();
+  const liveContext = useMemo(() => buildAssistantContext(liveData), [liveData]);
 
   // Bootstrap: idempotent, StrictMode-safe.
   useEffect(() => {
@@ -395,7 +398,7 @@ function AssistantPage() {
     setBusy(true);
 
     try {
-      const raw = await runGemini({ data: { prompt: trimmed } });
+      const raw = await runGemini({ data: { prompt: trimmed, context: liveContext || undefined } });
       const ans: Answer = { ...raw, actions: raw.actions ?? [] };
       updateActive((c) => ({ ...c, messages: [...c.messages, { id: aid, role: "ai", answer: ans, ts: Date.now(), streaming: true }] }));
       setTimeout(() => {
@@ -421,7 +424,7 @@ function AssistantPage() {
     try {
       const existing = active.messages.find((m) => m.id === aiMsgId);
       const regenCount = existing && existing.role === "ai" ? (existing.regenerated ?? 0) + 1 : 1;
-      const raw = await runGemini({ data: { prompt: prev.text } });
+      const raw = await runGemini({ data: { prompt: prev.text, context: liveContext || undefined } });
       const ans: Answer = { ...raw, actions: raw.actions ?? [] };
       updateActive((c) => ({
         ...c,
@@ -601,7 +604,18 @@ function AssistantPage() {
               <div className="flex justify-between py-0.5"><span className="text-muted-foreground">District</span><span>Metropolitan</span></div>
               <div className="flex justify-between py-0.5"><span className="text-muted-foreground">Layers</span><span>Health · Transit · Env · Safety</span></div>
               <div className="flex justify-between py-0.5"><span className="text-muted-foreground">Horizon</span><span>72h</span></div>
-              <div className="flex justify-between py-0.5"><span className="text-muted-foreground">Grounding</span><span className="text-emerald-neon">Live telemetry</span></div>
+              <div className="flex justify-between py-0.5">
+                <span className="text-muted-foreground">Grounding</span>
+                <span className={cn("inline-flex items-center gap-1", liveContext ? "text-emerald-neon" : "text-amber-neon")}>
+                  <span className={cn("h-1.5 w-1.5 rounded-full", liveContext ? "bg-emerald-neon pulse-dot" : "bg-amber-neon")} />
+                  {liveContext ? "Google Maps live" : liveFetching ? "Fetching…" : "Offline"}
+                </span>
+              </div>
+              {liveData && (
+                <div className="mt-2 pt-2 border-t border-border/60 text-[10px] text-muted-foreground leading-snug">
+                  Feeding Gemini {liveData.metrics.length} ward metrics · AQI · pollen UPI · weather · traffic
+                </div>
+              )}
             </div>
           </div>
         </aside>

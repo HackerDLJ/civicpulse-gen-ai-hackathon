@@ -1,12 +1,13 @@
-// Server-side Gemini call. Keeps GEMINI_API_KEY off the browser.
+// Server-side Gemini 1.5 call. Keeps GEMINI_API_KEY off the browser.
 // Requires an authenticated Supabase session to prevent anonymous quota abuse.
 import { createServerFn } from "@tanstack/react-start";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-type AskInput = { prompt: string };
+type AskInput = { prompt: string; context?: string };
 
 const MAX_PROMPT_CHARS = 2000;
+const MAX_CONTEXT_CHARS = 4000;
 
 export const askGemini = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -18,7 +19,9 @@ export const askGemini = createServerFn({ method: "POST" })
     if (prompt.length > MAX_PROMPT_CHARS) {
       throw new Error(`Prompt exceeds maximum length of ${MAX_PROMPT_CHARS} characters`);
     }
-    return { prompt };
+    const rawCtx = typeof d.context === "string" ? d.context.trim() : "";
+    const context = rawCtx.length > MAX_CONTEXT_CHARS ? rawCtx.slice(0, MAX_CONTEXT_CHARS) : rawCtx;
+    return { prompt, context: context || undefined };
   })
   .handler(async ({ data }) => {
     const key = process.env.GEMINI_API_KEY;
@@ -30,19 +33,25 @@ export const askGemini = createServerFn({ method: "POST" })
       generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
     });
 
-    const system = `You are CivicPulse, a municipal-ops AI. Reply with STRICT JSON of shape:
+    const system = `You are CivicPulse, a municipal-ops AI grounded in real-time Google Maps Platform telemetry.
+You will be given LIVE WARD METRICS containing per-ward Air Quality (AQI + dominant pollutant), Pollen (UPI 0–5 + pollen type), Weather (temperature + feels-like + condition), plus Google TrafficLayer congestion status. When live metrics are provided you MUST quote the actual figures (AQI values, dominant pollutants, pollen UPI, temperatures, weather conditions, traffic intensity) rather than inventing numbers.
+
+Reply with STRICT JSON of shape:
 {
- "headline": string (1 sentence, decisive),
+ "headline": string (1 sentence, decisive, cites at least one live metric when metrics are provided),
  "confidence": integer 60-99,
- "bullets": [{"h": string (2-4 words), "t": string (1 sentence)}] (3 items),
- "actions": [string] (3 short imperative recommendations)
+ "bullets": [{"h": string (2-4 words), "t": string (1 sentence, cites the live metric it depends on)}] (3 items),
+ "actions": [string] (3 short imperative recommendations tied to the live metrics)
 }
 No prose outside JSON. Ground answers in urban health, transit, environment, safety, utilities.`;
 
-    const result = await model.generateContent([
-      { text: system },
-      { text: `Operator question: ${data.prompt}` },
-    ]);
+    const parts: Array<{ text: string }> = [{ text: system }];
+    if (data.context) {
+      parts.push({ text: `LIVE WARD METRICS:\n${data.context}` });
+    }
+    parts.push({ text: `Operator question: ${data.prompt}` });
+
+    const result = await model.generateContent(parts);
 
     const text = result.response.text();
     try {

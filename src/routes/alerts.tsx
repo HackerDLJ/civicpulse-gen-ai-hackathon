@@ -216,14 +216,40 @@ function AlertsPage() {
                 <div className="flex gap-2 shrink-0">
                   <button
                     disabled={a.status !== "open"}
-                    onClick={() => { store.automateAlert(a.id); toast.success("Automated workflow dispatched", { description: a.title }); }}
+                    onClick={() => {
+                      const prev = a.status;
+                      store.automateAlert(a.id);
+                      toast.success("⚡ Automated workflow dispatched", {
+                        description: `${a.title} · ${a.sector}`,
+                        action: {
+                          label: "Undo",
+                          onClick: () => {
+                            store.revertAlert(a.id, prev);
+                            toast("Automation reverted");
+                          },
+                        },
+                      });
+                    }}
                     className="text-xs font-medium px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 hover:brightness-110 transition"
                   >
                     <Zap className="h-3.5 w-3.5" /> Automate
                   </button>
                   <button
                     disabled={a.status === "resolved"}
-                    onClick={() => { store.resolveAlert(a.id); toast("Alert resolved", { description: a.title }); }}
+                    onClick={() => {
+                      const prev = a.status;
+                      store.resolveAlert(a.id);
+                      toast.success("Alert marked resolved", {
+                        description: `${a.title} · ${a.sector}`,
+                        action: {
+                          label: "Undo",
+                          onClick: () => {
+                            store.revertAlert(a.id, prev);
+                            toast("Resolution reverted");
+                          },
+                        },
+                      });
+                    }}
                     className="text-xs px-3 py-2 rounded-lg border border-border hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
                   >
                     <Check className="h-3.5 w-3.5" /> Resolve

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Check, MessageSquareText, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
+import { EmptyState } from "@/components/pulse/Skeletons";
 
 export const Route = createFileRoute("/feedback")({
   head: () => ({ meta: [{ title: "Community Feedback · CivicPulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),
@@ -111,6 +112,20 @@ function FeedbackPage() {
               ))}
             </tbody>
           </table>
+          {rows.length === 0 && (
+            <div className="pt-4">
+              <EmptyState
+                title={`No ${tab === "all" ? "" : tab.toLowerCase() + " "}signals right now`}
+                hint={<>The Gemini extractor is still watching {feedback.length} live channels. Reset the filter to see everything, or retry the ingestion sweep.</>}
+                icon={<MessageSquareText className="h-5 w-5" />}
+                actionLabel={tab === "all" ? "Retry ingestion sweep" : "Show all signals"}
+                onAction={() => {
+                  if (tab === "all") toast.success("Ingestion sweep re-queued", { description: "Gemini re-scanning last 15m of citizen channels." });
+                  else setTab("all");
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </AppShell>

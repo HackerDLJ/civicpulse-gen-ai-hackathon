@@ -90,6 +90,10 @@ export const store = {
     state = { ...state, alerts: state.alerts.map((a) => a.id === id ? { ...a, status: "automated" } : a) };
     emit();
   },
+  revertAlert(id: string, to: Alert["status"]) {
+    state = { ...state, alerts: state.alerts.map((a) => a.id === id ? { ...a, status: to } : a) };
+    emit();
+  },
   handleFeedback(id: string) {
     state = { ...state, feedback: state.feedback.map((f) => f.id === id ? { ...f, handled: !f.handled } : f) };
     emit();

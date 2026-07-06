@@ -5,6 +5,7 @@ import { Sparkles, Send, User, Zap, ChevronRight, Radio, TrendingUp, Plus, Trash
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { AiThinkingSkeleton } from "@/components/pulse/Skeletons";
 
 export const Route = createFileRoute("/assistant")({
   head: () => ({ meta: [{ title: "AI Decision Assistant · CivicPulse" }, { name: "description", content: "Ask anything about your city. Gemini-powered municipal reasoning." }] }),
@@ -536,10 +537,7 @@ function AssistantPage() {
               )
             ))}
             {busy && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex items-center gap-3 text-sm shimmer-text">
-                <Sparkles className="h-4 w-4 text-indigo-neon" />
-                Reasoning across health, transit, and environment layers…
-              </div>
+              <AiThinkingSkeleton />
             )}
             <div ref={endRef} />
           </div>

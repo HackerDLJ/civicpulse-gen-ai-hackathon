@@ -474,7 +474,7 @@ function AlertsPage() {
 
       {/* Cards */}
       <div className="mt-3 space-y-3">
-        {loading || livePending ? (
+        {loading ? (
           <LoadingSyncState signalChips={signalChips} />
         ) : error ? (
           <ErrorState

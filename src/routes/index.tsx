@@ -528,11 +528,31 @@ function StreamFeed() {
 }
 
 function DashboardPage() {
+  const [drill, setDrill] = useState<KpiKey | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setHydrated(true), 650);
+    return () => clearTimeout(t);
+  }, []);
+
+  const activeKpi = kpis.find((k) => k.key === drill) ?? null;
+
   return (
     <AppShell>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {kpis.map((k) => <KpiCard key={k.label} k={k} />)}
+        {hydrated
+          ? kpis.map((k) => (
+              <KpiCard
+                key={k.key}
+                k={k}
+                active={drill === k.key}
+                onClick={() => setDrill(drill === k.key ? null : k.key)}
+              />
+            ))
+          : Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)}
       </div>
+
+      {activeKpi && <KpiSummaryPanel k={activeKpi} onClose={() => setDrill(null)} />}
 
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 glass-panel rounded-2xl p-5">
@@ -542,7 +562,7 @@ function DashboardPage() {
               <div className="text-[11px] text-muted-foreground">Traffic congestion · Environmental risk · Healthcare access</div>
             </div>
           </div>
-          <CityMap />
+          {hydrated ? <CityMap /> : <MapSkeleton />}
         </div>
         <StreamFeed />
       </div>

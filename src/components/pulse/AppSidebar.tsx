@@ -21,7 +21,7 @@ export function AppSidebar() {
             <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-neon pulse-dot" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold tracking-tight">Pulse</div>
+            <div className="text-sm font-semibold tracking-tight">CivicPulse</div>
             <div className="text-[10.5px] uppercase tracking-widest text-muted-foreground">City Intelligence</div>
           </div>
         </div>

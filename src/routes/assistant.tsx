@@ -521,7 +521,7 @@ function AssistantPage() {
                     <Sparkles className="h-6 w-6 text-primary-foreground" />
                   </div>
                   <div className="mt-4 text-xl font-semibold tracking-tight">Ask anything about your city</div>
-                  <div className="mt-1 text-sm text-muted-foreground">Pulse fuses 42 live data layers with Gemini to surface decisions, not just dashboards. Try a prompt on the right, or type your own.</div>
+                  <div className="mt-1 text-sm text-muted-foreground">CivicPulse fuses 42 live data layers with Gemini to surface decisions, not just dashboards. Try a prompt on the right, or type your own.</div>
                 </div>
               </div>
             )}
@@ -550,7 +550,7 @@ function AssistantPage() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Pulse anything — 'How's Ward 3 trending?'"
+                placeholder="Ask CivicPulse anything — 'How's Ward 3 trending?'"
                 className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
               />
               <button type="submit" disabled={!input.trim() || busy} className="grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground disabled:opacity-40 hover:brightness-110 transition">

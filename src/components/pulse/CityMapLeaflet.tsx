@@ -1,7 +1,10 @@
 /// <reference types="google.maps" />
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Car, Wind, HeartPulse, Layers, MapPin, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Car, Wind, HeartPulse, Layers, MapPin, X, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getLiveHotspots } from "@/lib/google-maps.functions";
 
 // ---------- Types ----------
 export type LayerKey = "traffic" | "environment" | "health";
@@ -24,16 +27,8 @@ export type Hotspot = {
 const CENTER = { lat: 12.9716, lng: 77.5946 };
 const ZOOM = 12;
 
-const hotspots: Hotspot[] = [
-  { id: "h1", lat: 12.998, lng: 77.560, radius: 26, layer: "health", color: "rose",   title: "Respiratory cluster",    sector: "Sector B",         metric: "Admissions Δ",   value: "+22% / 6h", severity: "Critical", detail: "PM2.5 plume trapping under inversion layer. 340 walk-ins projected tonight." },
-  { id: "h2", lat: 12.985, lng: 77.640, radius: 22, layer: "traffic", color: "amber", title: "Ring Rd E-14 congestion", sector: "Ring Rd E-14",     metric: "Flow saturation", value: "92%",       severity: "High",     detail: "Signal desync + freight overlap. Cascade risk in 40 min." },
-  { id: "h3", lat: 12.945, lng: 77.680, radius: 18, layer: "environment", color: "teal", title: "Water pressure anomaly", sector: "Ward 7",       metric: "Δ baseline",      value: "-0.7 bar",  severity: "Medium",   detail: "Substation drift. No leak signature yet — monitor 2h." },
-  { id: "h4", lat: 12.938, lng: 77.605, radius: 24, layer: "environment", color: "rose", title: "Heat island",           sector: "Downtown",        metric: "Surface temp Δ",  value: "+2.4°C",    severity: "High",     detail: "Grid trending above forecast. Cooling center readiness advised." },
-  { id: "h5", lat: 12.972, lng: 77.594, radius: 16, layer: "traffic", color: "indigo", title: "Crowd density surge",   sector: "Central Plaza",   metric: "Est. count",      value: "8,120",     severity: "Medium",   detail: "Approaching safety threshold. Deploy stewards within 25 min." },
-  { id: "h6", lat: 12.996, lng: 77.700, radius: 16, layer: "health", color: "emerald",title: "Riverside · nominal",    sector: "Riverside",       metric: "Clinic load",     value: "48%",       severity: "Nominal",  detail: "All indicators within baseline. No action required." },
-  { id: "h7", lat: 12.955, lng: 77.540, radius: 18, layer: "health", color: "amber",  title: "Clinic capacity strain", sector: "Ward 3",          metric: "Utilization",     value: "92%",       severity: "High",     detail: "Overflow risk within 90 min at current arrival rate." },
-  { id: "h8", lat: 12.918, lng: 77.635, radius: 14, layer: "traffic", color: "teal",  title: "NR-9 spillback",         sector: "NR-9 / 4th Ave",  metric: "Queue length",    value: "310m",      severity: "Medium",   detail: "Left-turn cascade every ~14 min. Retiming candidate." },
-];
+// Hotspots now come live from Google Maps Platform (Air Quality + Pollen +
+// Weather) via getLiveHotspots(). Traffic uses Google's TrafficLayer overlay.
 
 const layerMeta: Record<LayerKey, { label: string; icon: typeof Car; ring: string; tone: string }> = {
   traffic:     { label: "Traffic",     icon: Car,        ring: "border-amber-neon/50 bg-amber-neon/10 text-amber-neon", tone: "text-amber-neon" },
@@ -101,6 +96,7 @@ function loadGoogleMaps(): Promise<typeof google.maps> {
 export default function CityMapInner() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const trafficRef = useRef<google.maps.TrafficLayer | null>(null);
   const markersRef = useRef<Record<string, google.maps.Marker>>({});
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +104,16 @@ export default function CityMapInner() {
   const [hover, setHover] = useState<Hotspot | null>(null);
   const [pinned, setPinned] = useState<Hotspot | null>(null);
 
-  const visible = useMemo(() => hotspots.filter((h) => layers[h.layer]), [layers]);
+  const fetchLive = useServerFn(getLiveHotspots);
+  const { data, isLoading, isFetching, refetch, error: liveError } = useQuery({
+    queryKey: ["live-hotspots"],
+    queryFn: () => fetchLive(),
+    refetchInterval: 5 * 60 * 1000, // refresh every 5 min
+    staleTime: 60 * 1000,
+  });
+  const allHotspots: Hotspot[] = (data?.hotspots as Hotspot[] | undefined) ?? [];
+
+  const visible = useMemo(() => allHotspots.filter((h) => layers[h.layer]), [allHotspots, layers]);
   const activeCount = Object.values(layers).filter(Boolean).length;
   const focused = pinned ?? hover;
 
@@ -180,6 +185,19 @@ export default function CityMapInner() {
     }
   }, [visible, focused]);
 
+  // Toggle Google's live TrafficLayer with the "traffic" layer button.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !(window as any).google?.maps) return;
+    const maps = (window as any).google.maps as typeof google.maps;
+    if (layers.traffic) {
+      if (!trafficRef.current) trafficRef.current = new maps.TrafficLayer();
+      trafficRef.current.setMap(map);
+    } else if (trafficRef.current) {
+      trafficRef.current.setMap(null);
+    }
+  }, [layers.traffic, ready]);
+
   return (
     <div>
       {/* Layer toggles */}
@@ -187,7 +205,7 @@ export default function CityMapInner() {
         {(Object.keys(layerMeta) as LayerKey[]).map((k) => {
           const m = layerMeta[k];
           const on = layers[k];
-          const count = hotspots.filter((h) => h.layer === k).length;
+          const count = allHotspots.filter((h) => h.layer === k).length;
           const Icon = m.icon;
           return (
             <button
@@ -227,11 +245,30 @@ export default function CityMapInner() {
         <div className="pointer-events-none absolute left-3 top-3 z-[400] glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
           <MapPin className="h-3 w-3 text-indigo-neon" /> Metropolitan District · Google Maps
         </div>
-        <div className="pointer-events-none absolute right-3 top-3 z-[400] glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
-          <Layers className="h-3 w-3 text-teal-neon" /> {activeCount} layer{activeCount === 1 ? "" : "s"} · {visible.length} hotspots
+        <div className="absolute right-3 top-3 z-[400] flex items-center gap-1.5">
+          <div className="glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
+            <Layers className="h-3 w-3 text-teal-neon" /> {activeCount} layer{activeCount === 1 ? "" : "s"} · {visible.length} live
+          </div>
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="glass-panel rounded-lg px-2 py-1.5 text-[10px] flex items-center gap-1 hover:text-teal-neon transition disabled:opacity-60"
+            aria-label="Refresh live data"
+          >
+            <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} />
+          </button>
         </div>
 
-        {/* Legend */}
+        {isLoading && (
+          <div className="pointer-events-none absolute inset-x-0 top-14 z-[400] flex justify-center">
+            <div className="glass-panel rounded-full px-3 py-1 text-[10px] text-muted-foreground">Fetching live Google Maps data…</div>
+          </div>
+        )}
+        {liveError && (
+          <div className="pointer-events-none absolute inset-x-0 top-14 z-[400] flex justify-center">
+            <div className="glass-panel rounded-full px-3 py-1 text-[10px] text-rose-neon">Live data unavailable</div>
+          </div>
+        )}
         <div className="pointer-events-none absolute left-3 bottom-8 sm:bottom-3 z-[400] glass-panel rounded-lg px-3 py-2 text-[10px] flex flex-wrap gap-3 max-w-[calc(100%-1.5rem)]">
           {[
             { c: "rose", l: "Critical" },

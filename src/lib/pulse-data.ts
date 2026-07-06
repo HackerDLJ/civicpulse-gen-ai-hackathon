@@ -8,6 +8,7 @@ export type Alert = {
   severity: "critical" | "high" | "medium" | "low";
   sector: string;
   ts: string;
+  ageMin: number;
   status: "open" | "resolved" | "automated";
   category: "health" | "environment" | "traffic" | "safety" | "utility";
 };

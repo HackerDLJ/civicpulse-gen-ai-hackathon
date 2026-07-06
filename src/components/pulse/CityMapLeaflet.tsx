@@ -1,10 +1,9 @@
 /// <reference types="google.maps" />
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { Car, Wind, HeartPulse, Layers, MapPin, X, RefreshCw } from "lucide-react";
+import { Car, Wind, HeartPulse, Layers, MapPin, X, RefreshCw, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getLiveHotspots } from "@/lib/google-maps.functions";
+import { useLiveHotspots, buildGoogleStreamEvents } from "@/lib/live-hotspots";
+import { store } from "@/lib/pulse-data";
 
 // ---------- Types ----------
 export type LayerKey = "traffic" | "environment" | "health";
@@ -26,9 +25,6 @@ export type Hotspot = {
 
 const CENTER = { lat: 12.9716, lng: 77.5946 };
 const ZOOM = 12;
-
-// Hotspots now come live from Google Maps Platform (Air Quality + Pollen +
-// Weather) via getLiveHotspots(). Traffic uses Google's TrafficLayer overlay.
 
 const layerMeta: Record<LayerKey, { label: string; icon: typeof Car; ring: string; tone: string }> = {
   traffic:     { label: "Traffic",     icon: Car,        ring: "border-amber-neon/50 bg-amber-neon/10 text-amber-neon", tone: "text-amber-neon" },
@@ -71,7 +67,9 @@ const darkMapStyles: google.maps.MapTypeStyle[] = [
 let mapsLoader: Promise<typeof google.maps> | null = null;
 function loadGoogleMaps(): Promise<typeof google.maps> {
   if (typeof window === "undefined") return Promise.reject(new Error("SSR"));
-  if ((window as any).google?.maps) return Promise.resolve((window as any).google.maps);
+  if ((window as unknown as { google?: { maps?: typeof google.maps } }).google?.maps) {
+    return Promise.resolve((window as unknown as { google: { maps: typeof google.maps } }).google.maps);
+  }
   if (mapsLoader) return mapsLoader;
 
   const key = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY;
@@ -80,7 +78,8 @@ function loadGoogleMaps(): Promise<typeof google.maps> {
 
   mapsLoader = new Promise((resolve, reject) => {
     const cbName = "__civicpulseInitGMaps";
-    (window as any)[cbName] = () => resolve((window as any).google.maps);
+    (window as unknown as Record<string, unknown>)[cbName] = () =>
+      resolve((window as unknown as { google: { maps: typeof google.maps } }).google.maps);
     const s = document.createElement("script");
     const params = new URLSearchParams({ key, loading: "async", callback: cbName });
     if (channel) params.set("channel", channel);
@@ -93,6 +92,14 @@ function loadGoogleMaps(): Promise<typeof google.maps> {
   return mapsLoader;
 }
 
+type ServiceKey = "airQuality" | "weather" | "pollen" | "traffic";
+const serviceMeta: Record<ServiceKey, { label: string; icon: typeof Wind }> = {
+  airQuality: { label: "Air Quality", icon: Wind },
+  weather:    { label: "Weather",     icon: Wind },
+  pollen:     { label: "Pollen",      icon: HeartPulse },
+  traffic:    { label: "Traffic",     icon: Car },
+};
+
 export default function CityMapInner() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -100,22 +107,30 @@ export default function CityMapInner() {
   const markersRef = useRef<Record<string, google.maps.Marker>>({});
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [trafficReady, setTrafficReady] = useState(false);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ traffic: true, environment: true, health: true });
   const [hover, setHover] = useState<Hotspot | null>(null);
   const [pinned, setPinned] = useState<Hotspot | null>(null);
 
-  const fetchLive = useServerFn(getLiveHotspots);
-  const { data, isLoading, isFetching, refetch, error: liveError } = useQuery({
-    queryKey: ["live-hotspots"],
-    queryFn: () => fetchLive(),
-    refetchInterval: 5 * 60 * 1000, // refresh every 5 min
-    staleTime: 60 * 1000,
-  });
+  const { data, isLoading, isFetching, refetch, error: liveError, failureCount, dataUpdatedAt } = useLiveHotspots();
   const allHotspots: Hotspot[] = (data?.hotspots as Hotspot[] | undefined) ?? [];
+  const services = data?.services;
 
   const visible = useMemo(() => allHotspots.filter((h) => layers[h.layer]), [allHotspots, layers]);
   const activeCount = Object.values(layers).filter(Boolean).length;
   const focused = pinned ?? hover;
+
+  // Push a batch of ingestion events into the dashboard Stream Feed every
+  // time the Google feed successfully refreshes. Keyed by fetchedAt so we
+  // only push once per real refresh (not on re-renders).
+  const lastPushedAtRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data?.fetchedAt) return;
+    if (lastPushedAtRef.current === data.fetchedAt) return;
+    lastPushedAtRef.current = data.fetchedAt;
+    const events = buildGoogleStreamEvents(data);
+    for (const ev of events) store.pushStream(ev);
+  }, [data]);
 
   // Load map once.
   useEffect(() => {
@@ -148,8 +163,9 @@ export default function CityMapInner() {
   // Sync markers whenever visibility or focus changes.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !(window as any).google?.maps) return;
-    const maps = (window as any).google.maps as typeof google.maps;
+    const win = window as unknown as { google?: { maps?: typeof google.maps } };
+    if (!map || !win.google?.maps) return;
+    const maps = win.google.maps;
 
     // Remove markers no longer visible.
     for (const id of Object.keys(markersRef.current)) {
@@ -188,15 +204,55 @@ export default function CityMapInner() {
   // Toggle Google's live TrafficLayer with the "traffic" layer button.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !(window as any).google?.maps) return;
-    const maps = (window as any).google.maps as typeof google.maps;
-    if (layers.traffic) {
-      if (!trafficRef.current) trafficRef.current = new maps.TrafficLayer();
-      trafficRef.current.setMap(map);
-    } else if (trafficRef.current) {
-      trafficRef.current.setMap(null);
+    const win = window as unknown as { google?: { maps?: typeof google.maps } };
+    if (!map || !ready || !win.google?.maps) return;
+    const maps = win.google.maps;
+    try {
+      if (layers.traffic) {
+        if (!trafficRef.current) trafficRef.current = new maps.TrafficLayer();
+        trafficRef.current.setMap(map);
+        setTrafficReady(true);
+      } else if (trafficRef.current) {
+        trafficRef.current.setMap(null);
+      }
+    } catch {
+      setTrafficReady(false);
     }
   }, [layers.traffic, ready]);
+
+  // ---------- Service status banner ----------
+  const serviceStatuses: Array<{ key: ServiceKey; state: "ok" | "warn" | "error" | "loading"; label: string; hint?: string }> = useMemo(() => {
+    const list: Array<{ key: ServiceKey; state: "ok" | "warn" | "error" | "loading"; label: string; hint?: string }> = [];
+    if (isLoading && !services) {
+      (["airQuality", "pollen", "weather"] as ServiceKey[]).forEach((k) =>
+        list.push({ key: k, state: "loading", label: serviceMeta[k].label, hint: "Fetching…" }),
+      );
+    } else if (services) {
+      (["airQuality", "pollen", "weather"] as ServiceKey[]).forEach((k) => {
+        const s = services[k];
+        const state: "ok" | "warn" | "error" = s.failed === 0 ? "ok" : s.succeeded > 0 ? "warn" : "error";
+        list.push({
+          key: k,
+          state,
+          label: serviceMeta[k].label,
+          hint: state === "ok"
+            ? `${s.succeeded}/${s.attempted} wards`
+            : `${s.failed}/${s.attempted} failed${s.errors.length ? ` · ${s.errors[0]}` : ""}`,
+        });
+      });
+    }
+    list.push({
+      key: "traffic",
+      state: layers.traffic ? (trafficReady ? "ok" : ready ? "warn" : "loading") : "warn",
+      label: serviceMeta.traffic.label,
+      hint: layers.traffic ? (trafficReady ? "Google TrafficLayer live" : "Overlay pending") : "Overlay disabled",
+    });
+    return list;
+  }, [isLoading, services, layers.traffic, trafficReady, ready]);
+
+  const anyFailed = serviceStatuses.some((s) => s.state === "error");
+  const anyDegraded = serviceStatuses.some((s) => s.state === "warn");
+  const lastRefreshLabel = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : null;
 
   return (
     <div>
@@ -231,6 +287,49 @@ export default function CityMapInner() {
         </button>
       </div>
 
+      {/* Service status banner */}
+      <div className={cn(
+        "mb-3 rounded-xl border px-3 py-2 flex flex-wrap items-center gap-2 text-[11px]",
+        anyFailed ? "border-rose-neon/40 bg-rose-neon/5" : anyDegraded ? "border-amber-neon/40 bg-amber-neon/5" : "border-border bg-surface-1/40"
+      )}>
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          {isFetching ? <Loader2 className="h-3 w-3 animate-spin text-indigo-neon" /> : <CheckCircle2 className="h-3 w-3 text-emerald-neon" />}
+          <span>Google services</span>
+        </span>
+        {serviceStatuses.map((s) => (
+          <span
+            key={s.key}
+            title={s.hint}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border",
+              s.state === "ok" && "border-emerald-neon/40 bg-emerald-neon/10 text-emerald-neon",
+              s.state === "warn" && "border-amber-neon/40 bg-amber-neon/10 text-amber-neon",
+              s.state === "error" && "border-rose-neon/40 bg-rose-neon/10 text-rose-neon",
+              s.state === "loading" && "border-indigo-neon/40 bg-indigo-neon/10 text-indigo-neon",
+            )}
+          >
+            {s.state === "loading" ? <Loader2 className="h-3 w-3 animate-spin" /> : s.state === "ok" ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+            <span className="font-medium">{s.label}</span>
+            <span className="opacity-70">· {s.hint}</span>
+          </span>
+        ))}
+        <span className="ml-auto flex items-center gap-2 text-muted-foreground">
+          {failureCount > 0 && !isFetching && (
+            <span className="text-amber-neon">Retry attempt {failureCount}</span>
+          )}
+          {lastRefreshLabel && <span>Last refresh {lastRefreshLabel}</span>}
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border hover:bg-surface-2 disabled:opacity-60 transition"
+            aria-label="Refresh Google Maps data"
+          >
+            <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} />
+            {isFetching ? "Refreshing" : "Refresh now"}
+          </button>
+        </span>
+      </div>
+
       <div className="relative aspect-[16/10] sm:aspect-[16/9] xl:aspect-[16/10] w-full rounded-xl border border-border overflow-hidden bg-surface-1">
         <div ref={containerRef} className="h-full w-full" />
 
@@ -249,24 +348,13 @@ export default function CityMapInner() {
           <div className="glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
             <Layers className="h-3 w-3 text-teal-neon" /> {activeCount} layer{activeCount === 1 ? "" : "s"} · {visible.length} live
           </div>
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="glass-panel rounded-lg px-2 py-1.5 text-[10px] flex items-center gap-1 hover:text-teal-neon transition disabled:opacity-60"
-            aria-label="Refresh live data"
-          >
-            <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} />
-          </button>
         </div>
 
-        {isLoading && (
-          <div className="pointer-events-none absolute inset-x-0 top-14 z-[400] flex justify-center">
-            <div className="glass-panel rounded-full px-3 py-1 text-[10px] text-muted-foreground">Fetching live Google Maps data…</div>
-          </div>
-        )}
         {liveError && (
           <div className="pointer-events-none absolute inset-x-0 top-14 z-[400] flex justify-center">
-            <div className="glass-panel rounded-full px-3 py-1 text-[10px] text-rose-neon">Live data unavailable</div>
+            <div className="glass-panel rounded-full px-3 py-1 text-[10px] text-rose-neon">
+              Google data fetch failed — {liveError instanceof Error ? liveError.message : "network error"} · retrying automatically
+            </div>
           </div>
         )}
         <div className="pointer-events-none absolute left-3 bottom-8 sm:bottom-3 z-[400] glass-panel rounded-lg px-3 py-2 text-[10px] flex flex-wrap gap-3 max-w-[calc(100%-1.5rem)]">

@@ -604,7 +604,18 @@ function AssistantPage() {
               <div className="flex justify-between py-0.5"><span className="text-muted-foreground">District</span><span>Metropolitan</span></div>
               <div className="flex justify-between py-0.5"><span className="text-muted-foreground">Layers</span><span>Health · Transit · Env · Safety</span></div>
               <div className="flex justify-between py-0.5"><span className="text-muted-foreground">Horizon</span><span>72h</span></div>
-              <div className="flex justify-between py-0.5"><span className="text-muted-foreground">Grounding</span><span className="text-emerald-neon">Live telemetry</span></div>
+              <div className="flex justify-between py-0.5">
+                <span className="text-muted-foreground">Grounding</span>
+                <span className={cn("inline-flex items-center gap-1", liveContext ? "text-emerald-neon" : "text-amber-neon")}>
+                  <span className={cn("h-1.5 w-1.5 rounded-full", liveContext ? "bg-emerald-neon pulse-dot" : "bg-amber-neon")} />
+                  {liveContext ? "Google Maps live" : liveFetching ? "Fetching…" : "Offline"}
+                </span>
+              </div>
+              {liveData && (
+                <div className="mt-2 pt-2 border-t border-border/60 text-[10px] text-muted-foreground leading-snug">
+                  Feeding Gemini {liveData.metrics.length} ward metrics · AQI · pollen UPI · weather · traffic
+                </div>
+              )}
             </div>
           </div>
         </aside>

@@ -564,7 +564,7 @@ function DashboardPage() {
           </div>
           {hydrated ? <CityMap /> : <MapSkeleton />}
         </div>
-        <StreamFeed />
+        {hydrated ? <StreamFeed /> : <StreamSkeleton />}
       </div>
 
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">

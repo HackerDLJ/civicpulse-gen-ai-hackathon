@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
 import { useFirestoreFeedback, toggleFeedbackHandled } from "@/lib/firestore-hooks";
 import { cn } from "@/lib/utils";
-import { Check, MessageSquareText, ArrowRight, Sparkles } from "lucide-react";
+import { Check, MessageSquareText, ArrowRight, Sparkles, Search, Filter, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 import { EmptyState, TableSkeleton, ErrorState } from "@/components/pulse/Skeletons";

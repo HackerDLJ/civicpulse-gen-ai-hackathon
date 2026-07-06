@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Check, MessageSquareText, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
-import { EmptyState } from "@/components/pulse/Skeletons";
+import { EmptyState, TableSkeleton, useHydrated } from "@/components/pulse/Skeletons";
 
 export const Route = createFileRoute("/feedback")({
   head: () => ({ meta: [{ title: "Community Feedback · CivicPulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),
@@ -20,6 +20,7 @@ const sentimentTone: Record<string, string> = {
 
 function FeedbackPage() {
   const feedback = useStore((s) => s.feedback);
+  const hydrated = useHydrated(500);
   const [tab, setTab] = useState<"all" | "Positive" | "Negative" | "Neutral">("all");
   const rows = useMemo(() => tab === "all" ? feedback : feedback.filter((f) => f.sentiment === tab), [feedback, tab]);
 
@@ -63,7 +64,10 @@ function FeedbackPage() {
         </div>
 
         <div className="mt-4 overflow-x-auto">
+          {!hydrated ? <TableSkeleton rows={6} cols={7} /> : (<>
           <table className="w-full text-sm">
+
+
             <thead>
               <tr className="text-[10px] uppercase tracking-widest text-muted-foreground border-b border-border">
                 <th className="text-left py-2 pr-3 font-medium">Source</th>
@@ -126,6 +130,7 @@ function FeedbackPage() {
               />
             </div>
           )}
+          </>)}
         </div>
       </div>
     </AppShell>

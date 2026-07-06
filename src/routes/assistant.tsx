@@ -427,7 +427,7 @@ function AssistantPage() {
       setTimeout(() => {
         updateActive((c) => ({ ...c, messages: c.messages.map((m) => m.id === aiMsgId && m.role === "ai" ? { ...m, streaming: false } : m) }));
         setBusy(false);
-        toast("Answer regenerated");
+        toast.success("Answer regenerated", { description: "Gemini reran the reasoning trace with fresh sampling.", duration: 2400 });
       }, 1200);
     }, 400);
   }
@@ -506,7 +506,14 @@ function AssistantPage() {
             <div className="text-sm font-semibold truncate">{active?.title ?? "Session"}</div>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-neon/15 text-indigo-neon border border-indigo-neon/30">Gemini 1.5 Pro · civic-tuned</span>
             <button
-              onClick={() => { if (active) { exportTranscriptMarkdown(active); toast.success("Transcript downloaded"); } }}
+              onClick={() => {
+                if (!active) return;
+                exportTranscriptMarkdown(active);
+                toast.success("Transcript exported", {
+                  description: `${active.messages.length} messages · civicpulse-transcript-${active.id}.md`,
+                  duration: 3000,
+                });
+              }}
               disabled={!active || active.messages.length === 0}
               className="ml-auto text-[11px] px-2.5 py-1 rounded-md border border-border hover:bg-surface-2 inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
@@ -566,7 +573,10 @@ function AssistantPage() {
             {prompts.map((p) => (
               <button
                 key={p}
-                onClick={() => ask(p)}
+                onClick={() => {
+                  ask(p);
+                  toast.success("Quick prompt sent", { description: p, duration: 2400 });
+                }}
                 className="group w-full text-left text-xs px-3 py-2.5 rounded-lg border border-border bg-surface-1/60 hover:border-indigo-neon/50 hover:bg-indigo-neon/10 transition flex items-start gap-2"
               >
                 <ChevronRight className="h-3.5 w-3.5 text-indigo-neon shrink-0 mt-0.5 group-hover:translate-x-0.5 transition" />

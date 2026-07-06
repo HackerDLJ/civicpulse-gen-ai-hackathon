@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
 import { useStore, aqiTrend, wardSatisfaction, store, type StreamEvent } from "@/lib/pulse-data";
 import { Activity, Wind, Gauge, Smile, TrendingUp, TrendingDown, MapPin, Layers, Zap, Radio, Car, HeartPulse, X, AlertTriangle, ArrowUpRight } from "lucide-react";
@@ -48,7 +48,14 @@ const toneMap = {
 // -------- 24h summary payloads (Dashboard drill-down) --------
 
 type SectorRow = { sector: string; value: string; delta: number };
-type Anomaly = { at: string; label: string; severity: "high" | "medium" | "low" };
+type AlertRange = "15m" | "1h" | "6h" | "24h" | "all";
+type Anomaly = {
+  at: string;
+  label: string;
+  severity: "high" | "medium" | "low";
+  sector?: string;
+  range?: AlertRange;
+};
 type Summary = {
   headline: string;
   narrative: string;
@@ -74,9 +81,9 @@ const kpiSummary: Record<KpiKey, Summary> = {
       { sector: "Downtown", value: "2 open", delta: 4 },
     ],
     anomalies: [
-      { at: "02:12", label: "Sector B respiratory admissions +22% / 6h", severity: "high" },
-      { at: "07:48", label: "Ring Rd E-14 cascade risk detected", severity: "medium" },
-      { at: "14:04", label: "Ward 7 water pressure -0.7 bar drift", severity: "medium" },
+      { at: "02:12", label: "Sector B respiratory admissions +22% / 6h", severity: "high", sector: "Sector B", range: "6h" },
+      { at: "07:48", label: "Ring Rd E-14 cascade risk detected", severity: "medium", sector: "Ring Rd E-14", range: "1h" },
+      { at: "14:04", label: "Ward 7 water pressure -0.7 bar drift", severity: "medium", sector: "Ward 7", range: "24h" },
     ],
   },
   aqi: {
@@ -95,9 +102,9 @@ const kpiSummary: Record<KpiKey, Summary> = {
       { sector: "Ward 8",    value: "AQI 68",  delta: -4 },
     ],
     anomalies: [
-      { at: "01:20", label: "Inversion layer detected · plume trap forecast 6h", severity: "high" },
+      { at: "01:20", label: "Inversion layer detected · plume trap forecast 6h", severity: "high", sector: "Sector B", range: "6h" },
       { at: "05:40", label: "Node #142 recalibration · baseline drift corrected", severity: "low" },
-      { at: "12:15", label: "Riverside industrial exceedance · 5-node rolling avg", severity: "medium" },
+      { at: "12:15", label: "Riverside industrial exceedance · 5-node rolling avg", severity: "medium", sector: "Riverside", range: "24h" },
     ],
   },
   resource: {
@@ -117,8 +124,8 @@ const kpiSummary: Record<KpiKey, Summary> = {
       { sector: "Sanitation",   value: "86.8%", delta: -3.4 },
     ],
     anomalies: [
-      { at: "T-6h", label: "Auto-shifted 4.2 MW · W7 → W8 substation", severity: "low" },
-      { at: "T-3h", label: "Sanitation route 12 missed · replacement dispatched", severity: "medium" },
+      { at: "T-6h", label: "Auto-shifted 4.2 MW · W7 → W8 substation", severity: "low", sector: "Ward 8", range: "24h" },
+      { at: "T-3h", label: "Sanitation route 12 missed · replacement dispatched", severity: "medium", sector: "Downtown", range: "24h" },
     ],
   },
   satisfaction: {
@@ -138,8 +145,8 @@ const kpiSummary: Record<KpiKey, Summary> = {
       { sector: "Ward 3",     value: "62",  delta: -2.6 },
     ],
     anomalies: [
-      { at: "08:20", label: "Ward 3 clinic wait complaints spike (+38%)", severity: "high" },
-      { at: "16:05", label: "Riverside market · positive sentiment surge", severity: "low" },
+      { at: "08:20", label: "Ward 3 clinic wait complaints spike (+38%)", severity: "high", sector: "Ward 3", range: "24h" },
+      { at: "16:05", label: "Riverside market · positive sentiment surge", severity: "low", sector: "Riverside", range: "24h" },
     ],
   },
 };
@@ -264,12 +271,37 @@ function KpiSummaryPanel({ k, onClose }: { k: KpiDef; onClose: () => void }) {
             <AlertTriangle className="h-3 w-3 text-rose-neon" /> Notable anomalies
           </div>
           <div className="space-y-2">
-            {s.anomalies.map((a, i) => (
-              <div key={i} className={cn("rounded-lg border px-3 py-2 text-xs flex items-start gap-2", sevTone[a.severity])}>
-                <span className="font-mono text-[10px] opacity-80 shrink-0">{a.at}</span>
-                <span className="leading-snug">{a.label}</span>
-              </div>
-            ))}
+            {s.anomalies.map((a, i) => {
+              const body = (
+                <>
+                  <span className="font-mono text-[10px] opacity-80 shrink-0">{a.at}</span>
+                  <span className="leading-snug flex-1">{a.label}</span>
+                  {a.sector && (
+                    <span className="ml-auto text-[10px] font-semibold opacity-80 inline-flex items-center gap-1 shrink-0">
+                      Open in Alerts <ArrowUpRight className="h-3 w-3" />
+                    </span>
+                  )}
+                </>
+              );
+              const className = cn(
+                "rounded-lg border px-3 py-2 text-xs flex items-center gap-2 transition",
+                sevTone[a.severity],
+                a.sector && "hover:brightness-125 hover:-translate-y-0.5 cursor-pointer"
+              );
+              return a.sector ? (
+                <Link
+                  key={i}
+                  to="/alerts"
+                  search={{ sector: a.sector, range: a.range ?? "24h" }}
+                  className={className}
+                  title={`Filter Live Alerts to ${a.sector} · ${a.range ?? "24h"}`}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div key={i} className={className}>{body}</div>
+              );
+            })}
             {s.anomalies.length === 0 && (
               <div className="text-[11px] text-muted-foreground">No anomalies detected in the last 24h.</div>
             )}

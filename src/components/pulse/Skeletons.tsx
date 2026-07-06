@@ -73,7 +73,7 @@ export function ChartSkeleton({ label = "Charting" }: { label?: string }) {
     <div className="h-64 relative rounded-lg border border-border bg-surface-1/40 overflow-hidden">
       <div className="absolute inset-4 flex items-end gap-2">
         {Array.from({ length: 12 }).map((_, i) => (
-          <Skel key={i} className="flex-1" style={{ height: `${25 + ((i * 13) % 60)}%` } as any} />
+          <Skel key={i} className="flex-1" style={{ height: `${25 + ((i * 13) % 60)}%` }} />
         ))}
       </div>
       <div className="absolute inset-x-0 top-3 text-center text-[10px] uppercase tracking-widest text-muted-foreground">

@@ -22,7 +22,38 @@ function FeedbackPage() {
   const { data: feedbackData, loading, error } = useFirestoreFeedback();
   const feedback = feedbackData ?? [];
   const [tab, setTab] = useState<"all" | "Positive" | "Negative" | "Neutral">("all");
-  const rows = useMemo(() => tab === "all" ? feedback : feedback.filter((f) => f.sentiment === tab), [feedback, tab]);
+  const [ward, setWard] = useState<string>("all");
+  const [category, setCategory] = useState<string>("all");
+  const [q, setQ] = useState("");
+
+  // Live-derived filter option lists — recompute whenever the Firestore snapshot changes.
+  const wards = useMemo(
+    () => Array.from(new Set(feedback.map((f) => f.ward).filter(Boolean))).sort(),
+    [feedback],
+  );
+  const categories = useMemo(
+    () => Array.from(new Set(feedback.map((f) => f.category).filter(Boolean))).sort(),
+    [feedback],
+  );
+
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return feedback.filter((f) =>
+      (tab === "all" || f.sentiment === tab)
+      && (ward === "all" || f.ward === ward)
+      && (category === "all" || f.category === category)
+      && (needle === ""
+        || f.text.toLowerCase().includes(needle)
+        || f.ward.toLowerCase().includes(needle)
+        || f.category.toLowerCase().includes(needle)
+        || f.source.toLowerCase().includes(needle)
+        || f.action.toLowerCase().includes(needle))
+    );
+  }, [feedback, tab, ward, category, q]);
+
+  const activeFilters =
+    (tab !== "all" ? 1 : 0) + (ward !== "all" ? 1 : 0) + (category !== "all" ? 1 : 0) + (q.trim() ? 1 : 0);
+  const resetFilters = () => { setTab("all"); setWard("all"); setCategory("all"); setQ(""); };
 
   const counts = {
     total: feedback.length,
@@ -53,7 +84,7 @@ function FeedbackPage() {
             <div className="text-sm font-semibold flex items-center gap-2"><MessageSquareText className="h-4 w-4 text-indigo-neon" /> Raw signal → structured action</div>
             <div className="text-[11px] text-muted-foreground">Gemini extracts sentiment, category, ward, and next-best action from unstructured text</div>
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             {(["all", "Positive", "Negative", "Neutral"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)} className={cn(
                 "text-[11px] px-2.5 py-1 rounded-md border transition capitalize",
@@ -62,6 +93,53 @@ function FeedbackPage() {
             ))}
           </div>
         </div>
+
+        {/* Live filter bar (ward, category, free-text) driven by the Firestore snapshot. */}
+        <div className="mt-4 rounded-xl border border-border/70 bg-surface-1/40 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Filter className="h-3.5 w-3.5 text-indigo-neon" />
+            <span className="text-[11px] font-semibold">Live filters</span>
+            {activeFilters > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-neon/15 text-indigo-neon border border-indigo-neon/30">
+                {activeFilters} active
+              </span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground">{rows.length} / {feedback.length} signals</span>
+            {activeFilters > 0 && (
+              <button onClick={resetFilters} className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                <RotateCcw className="h-3 w-3" /> Reset
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2">
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search text, ward, category, source…"
+                className="w-full text-xs pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface-1/60 focus:outline-none focus:border-indigo-neon/60 focus:ring-1 focus:ring-indigo-neon/40 placeholder:text-muted-foreground"
+              />
+            </div>
+            <select
+              value={ward}
+              onChange={(e) => setWard(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded-md border border-border bg-surface-1/60 focus:outline-none focus:border-indigo-neon/60 min-w-32"
+            >
+              <option value="all">All wards ({wards.length})</option>
+              {wards.map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded-md border border-border bg-surface-1/60 focus:outline-none focus:border-indigo-neon/60 min-w-36"
+            >
+              <option value="all">All categories ({categories.length})</option>
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+
 
         <div className="mt-4 overflow-x-auto">
           {loading ? (

@@ -33,12 +33,15 @@ type KpiDef = {
   up: boolean;
 };
 
-const kpis: KpiDef[] = [
-  { key: "alerts",       label: "Active Safety Alerts",     value: "14",    delta: "-3 vs 24h", icon: Activity, tone: "rose",    trend: [12, 15, 18, 14, 17, 14, 14], up: false },
-  { key: "aqi",          label: "Air Quality Index",         value: "82",    delta: "+6 pts",    icon: Wind,     tone: "teal",    trend: [70, 72, 74, 78, 80, 79, 82], up: true },
-  { key: "resource",     label: "Resource Allocation Eff.",  value: "94.2%", delta: "+1.8%",     icon: Gauge,    tone: "indigo",  trend: [88, 89, 91, 92, 93, 93, 94], up: true },
-  { key: "satisfaction", label: "Citizen Satisfaction",      value: "76%",   delta: "+2.4%",     icon: Smile,    tone: "emerald", trend: [70, 71, 73, 72, 74, 75, 76], up: true },
-];
+// KPI definitions are computed live inside DashboardPage from Firestore streams.
+// `staticKpis` is only used as a placeholder shape reference for the summary map keys.
+type KpiTone = "rose" | "teal" | "indigo" | "emerald";
+const KPI_META: Record<KpiKey, { label: string; icon: typeof Activity; tone: KpiTone }> = {
+  alerts:       { label: "Active Safety Alerts",    icon: Activity, tone: "rose" },
+  aqi:          { label: "Air Quality Index",        icon: Wind,     tone: "teal" },
+  resource:     { label: "Resource Allocation Eff.", icon: Gauge,    tone: "indigo" },
+  satisfaction: { label: "Citizen Satisfaction",     icon: Smile,    tone: "emerald" },
+};
 
 const toneMap = {
   rose: { text: "text-rose-neon", bg: "bg-rose-neon", border: "border-rose-neon/40", soft: "bg-rose-neon/10" },

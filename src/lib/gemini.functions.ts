@@ -28,15 +28,13 @@ export const askGemini = createServerFn({ method: "POST" })
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY is not configured on the server.");
 
-    const isAuthed = context?.isAuthenticated ?? false;
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
       generationConfig: {
         responseMimeType: "application/json",
-        // Anonymous callers get a slightly more conservative default.
-        temperature: isAuthed ? 0.4 : 0.3,
-        maxOutputTokens: isAuthed ? 1024 : 512,
+        temperature: 0.4,
+        maxOutputTokens: 1024,
       },
     });
 

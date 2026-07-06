@@ -9,13 +9,14 @@ import { EmptyState, TableSkeleton, ErrorState } from "@/components/pulse/Skelet
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getGoogleCommunityFeedback } from "@/lib/google-maps.functions";
+import { useHasSession } from "@/lib/live-hotspots";
 
 export const Route = createFileRoute("/feedback")({
   head: () => ({ meta: [{ title: "Community Feedback · CivicPulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),
   component: FeedbackPage,
 });
 
-function GoogleCommunityPanel() {
+function GoogleCommunityPanel({ enabled }: { enabled: boolean }) {
   const fetchLive = useServerFn(getGoogleCommunityFeedback);
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["google-community-feedback"],
@@ -23,6 +24,7 @@ function GoogleCommunityPanel() {
     refetchInterval: 5 * 60 * 1000,
     staleTime: 60 * 1000,
     retry: 2,
+    enabled,
   });
 
   const reviews = data?.reviews ?? [];
@@ -52,7 +54,7 @@ function GoogleCommunityPanel() {
           )}
           <button
             onClick={() => refetch()}
-            disabled={isFetching}
+            disabled={isFetching || !enabled}
             className="text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-surface-2 disabled:opacity-60"
           >
             <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} /> Refresh
@@ -60,7 +62,15 @@ function GoogleCommunityPanel() {
         </div>
       </div>
 
-      {isLoading ? (
+      {!enabled ? (
+        <div className="mt-4">
+          <EmptyState
+            title="Google community feed paused"
+            hint={<>Sign in to sync protected Google Maps review data for tracked wards.</>}
+            icon={<MapPin className="h-5 w-5" />}
+          />
+        </div>
+      ) : isLoading ? (
         <div className="mt-4"><TableSkeleton rows={3} cols={1} /></div>
       ) : error ? (
         <div className="mt-4">
@@ -139,6 +149,7 @@ const sentimentTone: Record<string, string> = {
 function FeedbackPage() {
   const { data: feedbackData, loading, error } = useFirestoreFeedback();
   const feedback = feedbackData ?? [];
+  const hasSession = useHasSession();
   const [tab, setTab] = useState<"all" | "Positive" | "Negative" | "Neutral">("all");
   const [ward, setWard] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
@@ -155,6 +166,7 @@ function FeedbackPage() {
     refetchInterval: 5 * 60 * 1000,
     staleTime: 60 * 1000,
     retry: 2,
+    enabled: hasSession,
   });
   const googleReviews = googleFeedback?.reviews ?? [];
 
@@ -213,7 +225,7 @@ function FeedbackPage() {
         ))}
       </div>
 
-      <GoogleCommunityPanel />
+      <GoogleCommunityPanel enabled={hasSession} />
 
 
 

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Bell, Command, Search } from "lucide-react";
+import { Bell, Command, HelpCircle, Search } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
+import { Onboarding } from "./Onboarding";
 
 const titles: Record<string, { title: string; sub: string }> = {
   "/": { title: "Operations Dashboard", sub: "Real-time city vitals · fused telemetry + citizen signal" },

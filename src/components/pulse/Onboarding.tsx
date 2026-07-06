@@ -27,7 +27,7 @@ const steps: Step[] = [
     body: "Real-time KPIs, the fused city signal map with toggleable Traffic / Environment / Health layers, and a rolling ingestion stream. Click any KPI to open its 24h summary.",
     icon: Activity,
     tone: "from-emerald-neon to-teal-neon",
-    cta: { label: "Open Dashboard", route: "/" },
+    cta: { label: "Open Dashboard", route: "/dashboard" },
     highlight: "Dashboard",
   },
   {

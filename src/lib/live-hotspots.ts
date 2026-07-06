@@ -1,15 +1,36 @@
 // Shared client-side hook + derivations for the live Google Maps Platform
 // data feed. Centralized here so Dashboard, Alerts, and Assistant all read
 // from the SAME react-query cache entry and derived summaries stay consistent.
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getLiveHotspots, type LiveHotspot, type WardMetrics, type LiveHotspotsResult } from "@/lib/google-maps.functions";
+import { supabase } from "@/integrations/supabase/client";
 import type { Alert, StreamEvent } from "@/lib/pulse-data";
 
 export const LIVE_HOTSPOTS_KEY = ["live-hotspots"] as const;
 
+export function useHasSession() {
+  const [hasSession, setHasSession] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setHasSession(!!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setHasSession(!!session);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+  return hasSession;
+}
+
 export function useLiveHotspots() {
   const fetchLive = useServerFn(getLiveHotspots);
+  const enabled = useHasSession();
   return useQuery<LiveHotspotsResult>({
     queryKey: LIVE_HOTSPOTS_KEY,
     queryFn: () => fetchLive() as Promise<LiveHotspotsResult>,
@@ -17,6 +38,7 @@ export function useLiveHotspots() {
     staleTime: 60 * 1000,
     retry: 2,
     retryDelay: (n) => Math.min(30_000, 2 ** n * 1000),
+    enabled,
   });
 }
 

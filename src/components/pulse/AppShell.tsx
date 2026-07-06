@@ -25,6 +25,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const meta = titles[pathname] ?? titles["/"];
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [nowUtc, setNowUtc] = useState<string>("--:--");
+  useEffect(() => {
+    const tick = () => setNowUtc(new Date().toISOString().slice(11, 16));
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Auto-close drawer on route change.
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
@@ -56,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-neon pulse-dot" />
-                <span className="hidden xs:inline">Live · </span>UTC {new Date().toISOString().slice(11, 16)}
+                <span className="hidden xs:inline">Live · </span>UTC {nowUtc}
               </div>
               <h1 className="text-base sm:text-lg md:text-xl font-semibold tracking-tight truncate">{meta.title}</h1>
               <p className="text-xs text-muted-foreground truncate hidden md:block">{meta.sub}</p>

@@ -15,7 +15,7 @@
       {
         "name": "list_alerts",
         "title": "List live civic alerts",
-        "description": "List active CivicPulse alerts from the live Firestore `alerts` collection. Supports filtering by severity, sector, and status so agents can triage the city in real time.",
+        "description": "List active CivicPulse alerts from the live Firestore `alerts` collection. Supports filtering by severity, sector, and status so agents can triage the city in real time. Returns items conforming to the strict production alert schema.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -57,12 +57,90 @@
             }
           }
         },
-        "outputSchema": null
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "alerts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "critical",
+                      "high",
+                      "medium",
+                      "low"
+                    ]
+                  },
+                  "sector": {
+                    "type": "string"
+                  },
+                  "ts": {
+                    "type": "string"
+                  },
+                  "ageMin": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "automated",
+                      "resolved"
+                    ]
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "health",
+                      "environment",
+                      "traffic",
+                      "safety",
+                      "utility"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "detail",
+                  "severity",
+                  "sector",
+                  "ts",
+                  "ageMin",
+                  "status",
+                  "category"
+                ]
+              }
+            },
+            "count": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "alerts",
+            "count"
+          ]
+        }
       },
       {
         "name": "list_feedback",
         "title": "List citizen feedback",
-        "description": "List citizen feedback signals from the live Firestore `feedback` collection, with optional sentiment and ward filters. Useful for summarizing civic sentiment.",
+        "description": "List citizen feedback signals from the live Firestore `feedback` collection, with optional sentiment and ward filters. Returns items conforming to the strict production feedback schema.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -92,7 +170,75 @@
             }
           }
         },
-        "outputSchema": null
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "feedback": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "Twitter/X",
+                      "Forum",
+                      "Hotline",
+                      "SMS",
+                      "Reddit"
+                    ]
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "sentiment": {
+                    "type": "string",
+                    "enum": [
+                      "Positive",
+                      "Negative",
+                      "Neutral"
+                    ]
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "ward": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string"
+                  },
+                  "handled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "source",
+                  "text",
+                  "sentiment",
+                  "category",
+                  "ward",
+                  "action",
+                  "handled"
+                ]
+              }
+            },
+            "count": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "feedback",
+            "count"
+          ]
+        }
       },
       {
         "name": "ask_civicpulse",
@@ -118,7 +264,58 @@
             "prompt"
           ]
         },
-        "outputSchema": null
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "type": "object",
+              "properties": {
+                "headline": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "bullets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "h": {
+                        "type": "string"
+                      },
+                      "t": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "h",
+                      "t"
+                    ]
+                  }
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "headline",
+                "confidence",
+                "bullets",
+                "actions"
+              ]
+            }
+          },
+          "required": [
+            "answer"
+          ]
+        }
       }
     ]
   }

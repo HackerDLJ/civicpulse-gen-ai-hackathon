@@ -1,6 +1,13 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 
+const answerSchema = z.object({
+  headline: z.string(),
+  confidence: z.number().int(),
+  bullets: z.array(z.object({ h: z.string(), t: z.string() })),
+  actions: z.array(z.string()),
+});
+
 export default defineTool({
   name: "ask_civicpulse",
   title: "Ask the CivicPulse decision assistant",
@@ -9,6 +16,7 @@ export default defineTool({
   inputSchema: {
     prompt: z.string().min(4).max(2000).describe("The operator's question, e.g. 'Where should we deploy mobile clinics tonight?'"),
   },
+  outputSchema: { answer: answerSchema },
   annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true },
   handler: async ({ prompt }) => {
     const key = process.env.GEMINI_API_KEY;
@@ -26,11 +34,21 @@ export default defineTool({
 No prose outside JSON.`;
     const result = await model.generateContent([{ text: system }, { text: `Operator question: ${prompt}` }]);
     const text = result.response.text();
-    let parsed: unknown;
-    try { parsed = JSON.parse(text); } catch { parsed = { headline: text.slice(0, 200), confidence: 75, bullets: [], actions: [] }; }
+    let raw: Record<string, unknown>;
+    try { raw = JSON.parse(text) as Record<string, unknown>; } catch {
+      raw = { headline: text.slice(0, 200), confidence: 75, bullets: [], actions: [] };
+    }
+    const answer = {
+      headline: String(raw.headline ?? "Gemini returned no headline."),
+      confidence: Math.max(60, Math.min(99, Number(raw.confidence) || 85)),
+      bullets: Array.isArray(raw.bullets)
+        ? raw.bullets.slice(0, 3).map((b) => ({ h: String((b as { h?: unknown }).h ?? ""), t: String((b as { t?: unknown }).t ?? "") }))
+        : [],
+      actions: Array.isArray(raw.actions) ? raw.actions.slice(0, 3).map((a) => String(a)) : [],
+    };
     return {
-      content: [{ type: "text", text: JSON.stringify(parsed, null, 2) }],
-      structuredContent: { answer: parsed },
+      content: [{ type: "text", text: JSON.stringify(answer, null, 2) }],
+      structuredContent: { answer },
     };
   },
 });

@@ -50,7 +50,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-          <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 lg:px-8 h-14 sm:h-16">
+          {/* Subtle brand accent line */}
+          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-indigo-neon/60 to-transparent" />
+          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-8 h-14 sm:h-16">
             {/* Mobile menu button */}
             <button
               onClick={() => setDrawerOpen(true)}
@@ -60,21 +62,40 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Menu className="h-4 w-4" />
             </button>
 
+            {/* Mobile brand mark (sidebar hidden on mobile) */}
+            <Link to="/hero" className="lg:hidden flex items-center gap-2 shrink-0" aria-label="CivicPulse home">
+              <div className="relative grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-neon to-teal-neon">
+                <Radio className="h-4 w-4 text-primary-foreground" />
+                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-neon pulse-dot" />
+              </div>
+              <span className="text-sm font-semibold tracking-tight hidden xs:inline">CivicPulse</span>
+            </Link>
+
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-neon pulse-dot" />
-                <span className="hidden xs:inline">Live · </span>UTC {nowUtc}
+                <span className="hidden xs:inline">Live</span>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="tabular-nums">UTC {nowUtc}</span>
               </div>
               <h1 className="text-base sm:text-lg md:text-xl font-semibold tracking-tight truncate">{meta.title}</h1>
               <p className="text-xs text-muted-foreground truncate hidden md:block">{meta.sub}</p>
             </div>
 
             {/* Desktop search */}
-            <div className="hidden xl:flex items-center gap-2 rounded-lg border border-border bg-surface-1/60 px-3 py-1.5 text-xs text-muted-foreground w-72 shrink-0">
+            <div className="hidden xl:flex items-center gap-2 rounded-lg border border-border bg-surface-1/60 hover:border-indigo-neon/40 hover:bg-surface-2 transition px-3 py-1.5 text-xs text-muted-foreground w-72 shrink-0">
               <Search className="h-3.5 w-3.5" />
               <span className="flex-1 truncate">Search sensors, wards, alerts…</span>
               <kbd className="inline-flex items-center gap-0.5 text-[10px] rounded bg-surface-3 px-1.5 py-0.5"><Command className="h-3 w-3" />K</kbd>
             </div>
+
+            <Link
+              to="/hero"
+              className="hidden md:inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg border border-border bg-surface-1/60 hover:bg-surface-2 hover:text-foreground transition text-[11px] text-muted-foreground shrink-0"
+              aria-label="About CivicPulse"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-indigo-neon" /> Intro
+            </Link>
 
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("civicpulse:onboarding"))}
@@ -86,15 +107,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <Link
               to="/alerts"
-              className="relative grid place-items-center h-9 w-9 rounded-lg border border-border bg-surface-1/60 hover:bg-surface-2 transition shrink-0"
+              className="relative grid place-items-center h-9 w-9 rounded-lg border border-border bg-surface-1/60 hover:bg-surface-2 hover:border-rose-neon/40 transition shrink-0"
               aria-label="Live alerts"
             >
               <Bell className="h-4 w-4" />
               <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-rose-neon pulse-dot" />
             </Link>
 
-            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-border shrink-0">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-neon to-teal-neon grid place-items-center text-[11px] font-semibold text-primary-foreground">MK</div>
+            <div className="hidden sm:flex items-center gap-2 pl-2 sm:pl-3 ml-0 sm:ml-1 border-l border-border shrink-0">
+              <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-indigo-neon to-teal-neon grid place-items-center text-[11px] font-semibold text-primary-foreground ring-2 ring-background">
+                MK
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-neon ring-2 ring-background" />
+              </div>
               <div className="hidden md:block text-xs leading-tight">
                 <div className="font-medium">M. Kaur</div>
                 <div className="text-muted-foreground">City Ops · L4</div>

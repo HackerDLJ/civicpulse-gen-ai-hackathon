@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
-import { useStore, store } from "@/lib/pulse-data";
+import { useFirestoreFeedback, toggleFeedbackHandled } from "@/lib/firestore-hooks";
 import { cn } from "@/lib/utils";
 import { Check, MessageSquareText, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
-import { EmptyState, TableSkeleton, useHydrated } from "@/components/pulse/Skeletons";
+import { EmptyState, TableSkeleton, ErrorState } from "@/components/pulse/Skeletons";
 
 export const Route = createFileRoute("/feedback")({
   head: () => ({ meta: [{ title: "Community Feedback · CivicPulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),
@@ -19,8 +19,8 @@ const sentimentTone: Record<string, string> = {
 };
 
 function FeedbackPage() {
-  const feedback = useStore((s) => s.feedback);
-  const hydrated = useHydrated(500);
+  const { data: feedbackData, loading, error } = useFirestoreFeedback();
+  const feedback = feedbackData ?? [];
   const [tab, setTab] = useState<"all" | "Positive" | "Negative" | "Neutral">("all");
   const rows = useMemo(() => tab === "all" ? feedback : feedback.filter((f) => f.sentiment === tab), [feedback, tab]);
 
@@ -64,7 +64,21 @@ function FeedbackPage() {
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          {!hydrated ? <TableSkeleton rows={6} cols={7} /> : (<>
+          {loading ? (
+            <TableSkeleton rows={6} cols={7} />
+          ) : error ? (
+            <ErrorState
+              title="Feedback stream unavailable"
+              hint={`Firestore: ${error}. Check the "feedback" collection permissions.`}
+              onRetry={() => window.location.reload()}
+            />
+          ) : feedback.length === 0 ? (
+            <EmptyState
+              title="No feedback in Firestore yet"
+              hint={<>The <code>feedback</code> collection is empty. Once citizen signals are ingested, they will appear here live.</>}
+              icon={<MessageSquareText className="h-5 w-5" />}
+            />
+          ) : (<>
           <table className="w-full text-sm">
 
 
@@ -101,7 +115,14 @@ function FeedbackPage() {
                   </td>
                   <td className="py-3 pl-3 text-right">
                     <button
-                      onClick={() => { store.handleFeedback(f.id); toast(f.handled ? "Reopened" : "Marked handled"); }}
+                      onClick={async () => {
+                        try {
+                          await toggleFeedbackHandled(f.id, !f.handled);
+                          toast(f.handled ? "Reopened" : "Marked handled");
+                        } catch (err) {
+                          toast.error("Firestore write failed", { description: err instanceof Error ? err.message : "Unknown error" });
+                        }
+                      }}
                       className={cn(
                         "text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-md border transition",
                         f.handled

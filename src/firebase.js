@@ -7,7 +7,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-const FIREBASE_API_KEY_FALLBACK = "AIzaSyDUMMY_REPLACE_WITH_FIREBASE_WEB_API_KEY";
+const FIREBASE_API_KEY_FALLBACK = "AIzaSyBsOWU_kjz_IwWNseCtaSVJTvuwCRphtz0";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK,

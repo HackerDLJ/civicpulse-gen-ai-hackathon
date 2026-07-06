@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Bell, Command, HelpCircle, Menu, Search, X, Radio, Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles } from "lucide-react";
+import { Bell, Command, HelpCircle, Menu, Search, X, Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
 import { Onboarding } from "./Onboarding";
 import { cn } from "@/lib/utils";
+import logoAsset from "@/assets/civicpulse-logo.svg.asset.json";
 
 const titles: Record<string, { title: string; sub: string }> = {
   "/": { title: "Operations Dashboard", sub: "Real-time city vitals · fused telemetry + citizen signal" },

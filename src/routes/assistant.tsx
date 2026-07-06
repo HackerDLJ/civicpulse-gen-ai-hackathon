@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AiThinkingSkeleton } from "@/components/pulse/Skeletons";
 import { askGemini } from "@/lib/gemini.functions";
+import { useLiveHotspots, buildAssistantContext } from "@/lib/live-hotspots";
 
 export const Route = createFileRoute("/assistant")({
   head: () => ({ meta: [{ title: "AI Decision Assistant · CivicPulse" }, { name: "description", content: "Ask anything about your city. Gemini-powered municipal reasoning." }] }),
@@ -352,6 +353,8 @@ function AssistantPage() {
   const [hydrated, setHydrated] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const runGemini = useServerFn(askGemini);
+  const { data: liveData, isFetching: liveFetching } = useLiveHotspots();
+  const liveContext = useMemo(() => buildAssistantContext(liveData), [liveData]);
 
   // Bootstrap: idempotent, StrictMode-safe.
   useEffect(() => {

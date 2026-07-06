@@ -575,7 +575,7 @@ function DashboardPage() {
           </div>
           <div className="h-64">
             <ResponsiveContainer>
-              <BarChart data={wardSatisfaction}>
+              <BarChart data={liveWardSatisfaction}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
                 <XAxis dataKey="ward" stroke="oklch(0.7 0.03 258)" fontSize={10} />
                 <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} />

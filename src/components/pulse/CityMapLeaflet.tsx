@@ -245,11 +245,30 @@ export default function CityMapInner() {
         <div className="pointer-events-none absolute left-3 top-3 z-[400] glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
           <MapPin className="h-3 w-3 text-indigo-neon" /> Metropolitan District · Google Maps
         </div>
-        <div className="pointer-events-none absolute right-3 top-3 z-[400] glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
-          <Layers className="h-3 w-3 text-teal-neon" /> {activeCount} layer{activeCount === 1 ? "" : "s"} · {visible.length} hotspots
+        <div className="absolute right-3 top-3 z-[400] flex items-center gap-1.5">
+          <div className="glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
+            <Layers className="h-3 w-3 text-teal-neon" /> {activeCount} layer{activeCount === 1 ? "" : "s"} · {visible.length} live
+          </div>
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="glass-panel rounded-lg px-2 py-1.5 text-[10px] flex items-center gap-1 hover:text-teal-neon transition disabled:opacity-60"
+            aria-label="Refresh live data"
+          >
+            <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} />
+          </button>
         </div>
 
-        {/* Legend */}
+        {isLoading && (
+          <div className="pointer-events-none absolute inset-x-0 top-14 z-[400] flex justify-center">
+            <div className="glass-panel rounded-full px-3 py-1 text-[10px] text-muted-foreground">Fetching live Google Maps data…</div>
+          </div>
+        )}
+        {liveError && (
+          <div className="pointer-events-none absolute inset-x-0 top-14 z-[400] flex justify-center">
+            <div className="glass-panel rounded-full px-3 py-1 text-[10px] text-rose-neon">Live data unavailable</div>
+          </div>
+        )}
         <div className="pointer-events-none absolute left-3 bottom-8 sm:bottom-3 z-[400] glass-panel rounded-lg px-3 py-2 text-[10px] flex flex-wrap gap-3 max-w-[calc(100%-1.5rem)]">
           {[
             { c: "rose", l: "Critical" },

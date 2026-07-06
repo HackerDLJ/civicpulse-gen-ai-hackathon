@@ -47,6 +47,8 @@ export type WardMetrics = {
   tempC?: number;
   feelsLikeC?: number;
   weatherCondition?: string;
+  trafficRatio?: number;
+  trafficDelayPct?: number;
 };
 
 export type LiveHotspotsResult = {
@@ -58,6 +60,7 @@ export type LiveHotspotsResult = {
     airQuality: ServiceStatus;
     pollen: ServiceStatus;
     weather: ServiceStatus;
+    traffic: ServiceStatus;
   };
 };
 

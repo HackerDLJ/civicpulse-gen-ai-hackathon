@@ -83,28 +83,50 @@ function HeroPage() {
             Live · fused telemetry + citizen signal
           </div>
           <h1 className="mt-6 text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight leading-[1.02]">
-            The nervous system for
+            Run your city
             <span className="block bg-gradient-to-r from-indigo-neon via-teal-neon to-emerald-neon bg-clip-text text-transparent">
-              modern city operations.
+              in real time.
             </span>
           </h1>
           <p className="mt-6 text-base sm:text-lg text-muted-foreground max-w-2xl leading-relaxed">
-            CivicPulse fuses live environment, traffic, health and community feeds into one console —
-            then lets a Gemini-powered assistant reason over it, so operators decide in seconds instead of shifts.
+            CivicPulse unifies live air, weather, traffic, safety and citizen feedback into one operator console —
+            with a Gemini-powered assistant that turns raw signal into decisions in seconds.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+
+          {/* Inline feature highlights */}
+          <ul className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2 max-w-2xl text-[12.5px]">
+            {[
+              { icon: AlertTriangle, tone: "text-rose-neon",    label: "Live anomaly alerts across every ward" },
+              { icon: BarChart3,     tone: "text-indigo-neon",  label: "Forecasts and cross-sector correlations" },
+              { icon: Sparkles,      tone: "text-emerald-neon", label: "Ask the AI. Get an operator-grade answer." },
+            ].map((f) => {
+              const Icon = f.icon;
+              return (
+                <li key={f.label} className="flex items-start gap-2 rounded-lg border border-border/60 bg-surface-1/40 px-3 py-2">
+                  <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${f.tone}`} />
+                  <span className="text-foreground/85 leading-snug">{f.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Primary + secondary CTA */}
+          <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-3">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground text-sm font-medium shadow-xl shadow-indigo-neon/25 hover:brightness-110 transition"
+              className="group relative inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-gradient-to-r from-indigo-neon via-primary to-teal-neon text-primary-foreground text-sm font-semibold tracking-tight shadow-[0_10px_40px_-10px_oklch(0.74_0.16_268/0.55)] hover:brightness-110 hover:shadow-[0_16px_50px_-10px_oklch(0.74_0.16_268/0.7)] transition-all"
             >
-              Open the dashboard <ArrowRight className="h-4 w-4" />
+              <span className="absolute inset-0 rounded-xl ring-1 ring-white/10 pointer-events-none" />
+              Open the operations console
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
               to="/alerts"
-              className="inline-flex items-center gap-2 h-11 px-5 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2 text-sm text-foreground transition"
+              className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2 hover:border-rose-neon/40 text-sm text-foreground transition"
             >
               <AlertTriangle className="h-4 w-4 text-rose-neon" /> See live alerts
             </Link>
+            <span className="text-[11px] text-muted-foreground sm:pl-1">No signup · instant demo data</span>
           </div>
 
           {/* Stat strip */}

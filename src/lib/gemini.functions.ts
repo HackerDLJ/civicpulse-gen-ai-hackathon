@@ -24,14 +24,20 @@ export const askGemini = createServerFn({ method: "POST" })
     const context = rawCtx.length > MAX_CONTEXT_CHARS ? rawCtx.slice(0, MAX_CONTEXT_CHARS) : rawCtx;
     return { prompt, context: context || undefined };
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY is not configured on the server.");
 
+    const isAuthed = context?.isAuthenticated ?? false;
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
-      generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
+      generationConfig: {
+        responseMimeType: "application/json",
+        // Anonymous callers get a slightly more conservative default.
+        temperature: isAuthed ? 0.4 : 0.3,
+        maxOutputTokens: isAuthed ? 1024 : 512,
+      },
     });
 
     const system = `You are CivicPulse, a municipal-ops AI grounded in real-time Google Maps Platform telemetry.

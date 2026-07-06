@@ -1,6 +1,20 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, RotateCw, Radio } from "lucide-react";
+import { AlertTriangle, RotateCw, Radio, WifiOff } from "lucide-react";
+
+/**
+ * useHydrated — small helper so every route boots with CivicPulse skeletons
+ * for a moment before real data is shown. Keeps the perceived latency identical
+ * across every page.
+ */
+export function useHydrated(delay = 550) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+  return ready;
+}
 
 export function Skel({ className, style }: { className?: string; style?: CSSProperties }) {
   return <div className={cn("skeleton-block", className)} style={style} />;
@@ -145,6 +159,84 @@ export function EmptyState({
           className="mt-4 text-xs px-3 py-1.5 rounded-md border border-border hover:bg-surface-2 inline-flex items-center gap-1.5"
         >
           <RotateCw className="h-3 w-3" /> {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Row-list skeleton (Alerts, generic feeds). */
+export function ListSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="glass-panel rounded-2xl p-4 md:p-5 relative overflow-hidden">
+          <div className="absolute left-0 top-0 h-full w-1 skeleton-block" />
+          <div className="flex items-center gap-4">
+            <Skel className="h-11 w-11 rounded-xl shrink-0" />
+            <div className="flex-1 space-y-2 min-w-0">
+              <div className="flex gap-2">
+                <Skel className="h-3 w-14" />
+                <Skel className="h-3 w-20" />
+                <Skel className="h-3 w-10" />
+              </div>
+              <Skel className="h-4 w-3/4" />
+              <Skel className="h-3 w-1/2" />
+            </div>
+            <div className="hidden sm:flex gap-2 shrink-0">
+              <Skel className="h-8 w-24 rounded-lg" />
+              <Skel className="h-8 w-20 rounded-lg" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Table skeleton for the Feedback grid. */
+export function TableSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
+  return (
+    <div className="space-y-2">
+      <div className="grid gap-3 border-b border-border pb-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        {Array.from({ length: cols }).map((_, i) => <Skel key={i} className="h-3 w-16" />)}
+      </div>
+      {Array.from({ length: rows }).map((_, r) => (
+        <div key={r} className="grid gap-3 border-b border-border/40 py-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          {Array.from({ length: cols }).map((_, c) => (
+            <Skel key={c} className={cn("h-3.5", c === 1 ? "w-full" : c === 5 ? "w-3/4" : "w-2/3")} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Standardized error state with retry — same visual grammar as EmptyState. */
+export function ErrorState({
+  title = "We couldn't reach the CivicPulse mesh",
+  hint = "The upstream layer returned an unexpected response. This is usually transient — retry to re-subscribe.",
+  onRetry,
+  retryLabel = "Retry connection",
+}: {
+  title?: string;
+  hint?: ReactNode;
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
+  return (
+    <div className="glass-panel rounded-2xl p-10 text-center border border-rose-neon/30 animate-rise">
+      <div className="mx-auto h-12 w-12 rounded-2xl grid place-items-center border border-rose-neon/40 bg-rose-neon/10 text-rose-neon">
+        <WifiOff className="h-5 w-5" />
+      </div>
+      <div className="mt-3 text-sm font-semibold">{title}</div>
+      <div className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">{hint}</div>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="mt-4 text-xs px-3 py-1.5 rounded-md border border-rose-neon/40 text-rose-neon hover:bg-rose-neon/10 inline-flex items-center gap-1.5"
+        >
+          <RotateCw className="h-3 w-3" /> {retryLabel}
         </button>
       )}
     </div>

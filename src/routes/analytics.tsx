@@ -5,6 +5,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, P
 import { TrendingUp, Layers, Sparkles, Cpu, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { KpiCardSkeleton, ChartSkeleton, useHydrated } from "@/components/pulse/Skeletons";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({ meta: [{ title: "Data Analytics · CivicPulse" }, { name: "description", content: "Cross-sector trends, forecasts, and resource allocation intelligence." }] }),
@@ -215,33 +216,36 @@ function DrillPanel({ payload, onBack }: { payload: DrillPayload; onBack: () => 
 
 function AnalyticsPage() {
   const [drill, setDrill] = useState<KpiKey | null>(null);
+  const hydrated = useHydrated(500);
 
   return (
     <AppShell>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {kpis.map((k) => {
-          const active = drill === k.key;
-          return (
-            <button
-              key={k.key}
-              onClick={() => setDrill(active ? null : k.key)}
-              className={cn(
-                "glass-panel rounded-2xl p-5 text-left transition group hover:-translate-y-0.5",
-                active && "neon-ring-indigo"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{k.label}</div>
-                <k.icon className={`h-4 w-4 ${k.tone} transition group-hover:scale-110`} />
-              </div>
-              <div className="mt-2 text-2xl font-semibold">{k.value}</div>
-              <div className="text-[11px] text-muted-foreground">{k.sub}</div>
-              <div className="mt-2 text-[10px] text-indigo-neon opacity-0 group-hover:opacity-100 transition">
-                {active ? "Hide drill-down ↑" : "Click to drill down →"}
-              </div>
-            </button>
-          );
-        })}
+        {hydrated
+          ? kpis.map((k) => {
+              const active = drill === k.key;
+              return (
+                <button
+                  key={k.key}
+                  onClick={() => setDrill(active ? null : k.key)}
+                  className={cn(
+                    "glass-panel rounded-2xl p-5 text-left transition group hover:-translate-y-0.5",
+                    active && "neon-ring-indigo"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{k.label}</div>
+                    <k.icon className={`h-4 w-4 ${k.tone} transition group-hover:scale-110`} />
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold">{k.value}</div>
+                  <div className="text-[11px] text-muted-foreground">{k.sub}</div>
+                  <div className="mt-2 text-[10px] text-indigo-neon opacity-0 group-hover:opacity-100 transition">
+                    {active ? "Hide drill-down ↑" : "Click to drill down →"}
+                  </div>
+                </button>
+              );
+            })
+          : Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)}
       </div>
 
       {drill && (
@@ -256,20 +260,22 @@ function AnalyticsPage() {
             <div className="text-sm font-semibold">Demand vs. Capacity · 48h Forecast</div>
             <div className="text-[11px] text-muted-foreground">Gemini forecaster · 94% confidence band</div>
           </div>
-          <div className="h-72">
-            <ResponsiveContainer>
-              <LineChart data={forecastSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
-                <XAxis dataKey="t" stroke="oklch(0.7 0.03 258)" fontSize={10} />
-                <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <ReferenceLine y={80} stroke="var(--rose-neon)" strokeDasharray="4 4" label={{ value: "Capacity", fill: "var(--rose-neon)", fontSize: 10, position: "right" }} />
-                <Line type="monotone" dataKey="demand" stroke="var(--teal-neon)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="forecast" stroke="var(--indigo-neon)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {hydrated ? (
+            <div className="h-72">
+              <ResponsiveContainer>
+                <LineChart data={forecastSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
+                  <XAxis dataKey="t" stroke="oklch(0.7 0.03 258)" fontSize={10} />
+                  <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <ReferenceLine y={80} stroke="var(--rose-neon)" strokeDasharray="4 4" label={{ value: "Capacity", fill: "var(--rose-neon)", fontSize: 10, position: "right" }} />
+                  <Line type="monotone" dataKey="demand" stroke="var(--teal-neon)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="forecast" stroke="var(--indigo-neon)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : <ChartSkeleton label="Forecasting demand" />}
         </div>
 
         <div className="glass-panel rounded-2xl p-5">

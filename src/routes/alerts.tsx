@@ -4,10 +4,28 @@ import { useStore, store, type Alert } from "@/lib/pulse-data";
 import { AlertTriangle, Zap, Check, Filter, ShieldAlert, Activity, Droplet, Car, Wind, RotateCcw, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ListSkeleton, useHydrated, EmptyState } from "@/components/pulse/Skeletons";
+
+type AlertsSearch = {
+  sector?: string;
+  range?: "15m" | "1h" | "6h" | "24h" | "all";
+  sev?: string;    // comma-separated
+  status?: "all" | "open" | "automated" | "resolved";
+};
 
 export const Route = createFileRoute("/alerts")({
   head: () => ({ meta: [{ title: "Live Alerts · CivicPulse" }, { name: "description", content: "AI-flagged anomalies with automated workflow controls." }] }),
+  validateSearch: (raw: Record<string, unknown>): AlertsSearch => {
+    const ranges: AlertsSearch["range"][] = ["15m", "1h", "6h", "24h", "all"];
+    const statuses: AlertsSearch["status"][] = ["all", "open", "automated", "resolved"];
+    return {
+      sector: typeof raw.sector === "string" ? raw.sector : undefined,
+      range: ranges.includes(raw.range as AlertsSearch["range"]) ? (raw.range as AlertsSearch["range"]) : undefined,
+      sev: typeof raw.sev === "string" ? raw.sev : undefined,
+      status: statuses.includes(raw.status as AlertsSearch["status"]) ? (raw.status as AlertsSearch["status"]) : undefined,
+    };
+  },
   component: AlertsPage,
 });
 
@@ -36,11 +54,34 @@ const severities: Severity[] = ["critical", "high", "medium", "low"];
 
 function AlertsPage() {
   const alerts = useStore((s) => s.alerts);
-  const [sev, setSev] = useState<Set<Severity>>(new Set(severities));
-  const [sector, setSector] = useState<string>("all");
-  const [range, setRange] = useState<TimeKey>("24h");
-  const [status, setStatus] = useState<"all" | "open" | "automated" | "resolved">("all");
+  const search = Route.useSearch();
+  const hydrated = useHydrated(400);
+
+  const initialSev = (): Set<Severity> => {
+    if (!search.sev) return new Set(severities);
+    const parts = search.sev.split(",").filter((s: string): s is Severity => (severities as string[]).includes(s));
+    return parts.length ? new Set(parts) : new Set(severities);
+  };
+
+  const [sev, setSev] = useState<Set<Severity>>(initialSev);
+  const [sector, setSector] = useState<string>(search.sector ?? "all");
+  const [range, setRange] = useState<TimeKey>(search.range ?? "24h");
+  const [status, setStatus] = useState<"all" | "open" | "automated" | "resolved">(search.status ?? "all");
   const [sectorOpen, setSectorOpen] = useState(false);
+
+  // Re-apply when navigating in with new search params (e.g. from a KPI anomaly link).
+  useEffect(() => {
+    if (search.sector !== undefined) setSector(search.sector);
+    if (search.range !== undefined) setRange(search.range);
+    if (search.status !== undefined) setStatus(search.status);
+    if (search.sev !== undefined) setSev(initialSev());
+    if (search.sector || search.range) {
+      toast("Filters synced from link", {
+        description: [search.sector && `sector: ${search.sector}`, search.range && `window: ${search.range}`].filter(Boolean).join(" · "),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.sector, search.range, search.sev, search.status]);
 
   const sectors = useMemo(() => Array.from(new Set(alerts.map((a) => a.sector))).sort(), [alerts]);
   const rangeMin = timeRanges.find((r) => r.key === range)!.minutes;
@@ -79,6 +120,7 @@ function AlertsPage() {
     + (sector !== "all" ? 1 : 0)
     + (range !== "24h" ? 1 : 0)
     + (status !== "all" ? 1 : 0);
+
 
   return (
     <AppShell>
@@ -192,80 +234,87 @@ function AlertsPage() {
       </div>
 
       <div className="mt-4 space-y-3">
-        {filtered.map((a) => {
-          const s = sevMap[a.severity];
-          const Icon = catIcon[a.category];
-          return (
-            <div key={a.id} className={cn("glass-panel rounded-2xl p-4 md:p-5 relative overflow-hidden animate-rise", a.status !== "open" && "opacity-70")}>
-              <div className={cn("absolute left-0 top-0 h-full w-1", s.bar)} />
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className={cn("grid place-items-center h-11 w-11 rounded-xl border shrink-0", s.ring, s.text)}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={cn("text-[10px] font-semibold tracking-widest px-1.5 py-0.5 rounded border", s.ring, s.text)}>{s.label}</span>
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{a.sector}</span>
-                    <span className="text-[10px] text-muted-foreground">· {a.ts}</span>
-                    {a.status === "automated" && <span className="text-[10px] font-semibold text-indigo-neon">⚡ Workflow running</span>}
-                    {a.status === "resolved" && <span className="text-[10px] font-semibold text-emerald-neon">✓ Resolved</span>}
+        {!hydrated ? (
+          <ListSkeleton rows={4} />
+        ) : (
+          <>
+            {filtered.map((a) => {
+              const s = sevMap[a.severity];
+              const Icon = catIcon[a.category];
+              return (
+                <div key={a.id} className={cn("glass-panel rounded-2xl p-4 md:p-5 relative overflow-hidden animate-rise", a.status !== "open" && "opacity-70")}>
+                  <div className={cn("absolute left-0 top-0 h-full w-1", s.bar)} />
+                  <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    <div className={cn("grid place-items-center h-11 w-11 rounded-xl border shrink-0", s.ring, s.text)}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={cn("text-[10px] font-semibold tracking-widest px-1.5 py-0.5 rounded border", s.ring, s.text)}>{s.label}</span>
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{a.sector}</span>
+                        <span className="text-[10px] text-muted-foreground">· {a.ts}</span>
+                        {a.status === "automated" && <span className="text-[10px] font-semibold text-indigo-neon">⚡ Workflow running</span>}
+                        {a.status === "resolved" && <span className="text-[10px] font-semibold text-emerald-neon">✓ Resolved</span>}
+                      </div>
+                      <div className="mt-1 font-semibold tracking-tight">{a.title}</div>
+                      <div className="text-sm text-muted-foreground">{a.detail}</div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        disabled={a.status !== "open"}
+                        onClick={() => {
+                          const prev = a.status;
+                          store.automateAlert(a.id);
+                          toast.success("⚡ Automated workflow dispatched", {
+                            description: `${a.title} · ${a.sector}`,
+                            action: {
+                              label: "Undo",
+                              onClick: () => {
+                                store.revertAlert(a.id, prev);
+                                toast("Automation reverted");
+                              },
+                            },
+                          });
+                        }}
+                        className="text-xs font-medium px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 hover:brightness-110 transition"
+                      >
+                        <Zap className="h-3.5 w-3.5" /> Automate
+                      </button>
+                      <button
+                        disabled={a.status === "resolved"}
+                        onClick={() => {
+                          const prev = a.status;
+                          store.resolveAlert(a.id);
+                          toast.success("Alert marked resolved", {
+                            description: `${a.title} · ${a.sector}`,
+                            action: {
+                              label: "Undo",
+                              onClick: () => {
+                                store.revertAlert(a.id, prev);
+                                toast("Resolution reverted");
+                              },
+                            },
+                          });
+                        }}
+                        className="text-xs px-3 py-2 rounded-lg border border-border hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
+                      >
+                        <Check className="h-3.5 w-3.5" /> Resolve
+                      </button>
+                    </div>
                   </div>
-                  <div className="mt-1 font-semibold tracking-tight">{a.title}</div>
-                  <div className="text-sm text-muted-foreground">{a.detail}</div>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    disabled={a.status !== "open"}
-                    onClick={() => {
-                      const prev = a.status;
-                      store.automateAlert(a.id);
-                      toast.success("⚡ Automated workflow dispatched", {
-                        description: `${a.title} · ${a.sector}`,
-                        action: {
-                          label: "Undo",
-                          onClick: () => {
-                            store.revertAlert(a.id, prev);
-                            toast("Automation reverted");
-                          },
-                        },
-                      });
-                    }}
-                    className="text-xs font-medium px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-neon to-teal-neon text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 hover:brightness-110 transition"
-                  >
-                    <Zap className="h-3.5 w-3.5" /> Automate
-                  </button>
-                  <button
-                    disabled={a.status === "resolved"}
-                    onClick={() => {
-                      const prev = a.status;
-                      store.resolveAlert(a.id);
-                      toast.success("Alert marked resolved", {
-                        description: `${a.title} · ${a.sector}`,
-                        action: {
-                          label: "Undo",
-                          onClick: () => {
-                            store.revertAlert(a.id, prev);
-                            toast("Resolution reverted");
-                          },
-                        },
-                      });
-                    }}
-                    className="text-xs px-3 py-2 rounded-lg border border-border hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
-                  >
-                    <Check className="h-3.5 w-3.5" /> Resolve
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div className="glass-panel rounded-2xl p-10 text-center">
-            <AlertTriangle className="h-8 w-8 mx-auto text-muted-foreground" />
-            <div className="mt-3 text-sm font-medium">No alerts match your filters</div>
-            <div className="text-xs text-muted-foreground">Try widening the time range or clearing sector selection.</div>
-            <button onClick={resetFilters} className="mt-4 text-xs px-3 py-1.5 rounded-md border border-border hover:bg-surface-2">Reset filters</button>
-          </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <EmptyState
+                title="No alerts match your filters"
+                hint="Try widening the time range or clearing the sector selection."
+                icon={<AlertTriangle className="h-5 w-5" />}
+                actionLabel="Reset filters"
+                onAction={resetFilters}
+              />
+            )}
+          </>
         )}
       </div>
     </AppShell>

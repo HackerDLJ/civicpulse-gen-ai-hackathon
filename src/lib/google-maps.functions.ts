@@ -205,6 +205,54 @@ async function fetchWeather(p: typeof POINTS[number]): Promise<FetchOutcome> {
   }
 }
 
+// ---------- Traffic (Routes API — traffic-aware vs static duration) ----------
+async function fetchTraffic(p: typeof POINTS[number]): Promise<FetchOutcome> {
+  try {
+    const origin = { location: { latLng: { latitude: p.lat, longitude: p.lng } } };
+    // ~2.5km NE probe from each focal point.
+    const destination = { location: { latLng: { latitude: p.lat + 0.02, longitude: p.lng + 0.02 } } };
+    const r = await fetch(`${GATEWAY}/routes/directions/v2:computeRoutes`, {
+      method: "POST",
+      headers: { ...headers(), "X-Goog-FieldMask": "routes.duration,routes.staticDuration,routes.distanceMeters" },
+      body: JSON.stringify({
+        origin, destination,
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_AWARE",
+      }),
+    });
+    if (!r.ok) return { error: `HTTP ${r.status}` };
+    const j = await r.json();
+    const route = j?.routes?.[0];
+    if (!route) return { error: "no route" };
+    const parseSec = (s: string | undefined) => (typeof s === "string" ? Number(s.replace(/s$/, "")) : NaN);
+    const live = parseSec(route.duration);
+    const base = parseSec(route.staticDuration);
+    if (!isFinite(live) || !isFinite(base) || base <= 0) return { error: "duration missing" };
+    const ratio = live / base;
+    const pct = Math.round((ratio - 1) * 100);
+    const sev: Severity = ratio >= 1.6 ? "Critical" : ratio >= 1.3 ? "High" : ratio >= 1.15 ? "Medium" : ratio >= 1.05 ? "Low" : "Nominal";
+    const color: Color = ratio >= 1.6 ? "rose" : ratio >= 1.3 ? "amber" : ratio >= 1.15 ? "teal" : "indigo";
+    return {
+      hotspot: {
+        id: `tr-${p.id}`,
+        lat: p.lat + 0.003, lng: p.lng - 0.004,
+        radius: 16 + Math.max(0, pct),
+        layer: "traffic",
+        color,
+        title: `Traffic · ${pct >= 0 ? "+" : ""}${pct}% vs free-flow`,
+        sector: p.sector,
+        metric: "Congestion ratio",
+        value: `${ratio.toFixed(2)}×`,
+        severity: sev,
+        detail: `Live drive ${Math.round(live / 60)} min vs free-flow ${Math.round(base / 60)} min on a 2.5 km probe route from ${p.sector}.`,
+      },
+      patch: { trafficRatio: ratio, trafficDelayPct: pct },
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "network error" };
+  }
+}
+
 function emptyStatus(): ServiceStatus {
   return { ok: true, attempted: 0, succeeded: 0, failed: 0, errors: [] };
 }
@@ -214,7 +262,6 @@ function recordStatus(s: ServiceStatus, outcome: FetchOutcome, sector: string) {
   if (outcome.error) {
     s.failed++;
     s.ok = false;
-    // Keep the first three unique-ish error strings for the banner.
     const label = `${sector}: ${outcome.error}`;
     if (s.errors.length < 3) s.errors.push(label);
   } else {
@@ -226,20 +273,23 @@ export const getLiveHotspots = createServerFn({ method: "GET" }).handler(async (
   const airQuality = emptyStatus();
   const pollen = emptyStatus();
   const weather = emptyStatus();
+  const traffic = emptyStatus();
   const metricsBySector = new Map<string, WardMetrics>();
   const hotspots: LiveHotspot[] = [];
 
   const tasks = POINTS.map(async (p) => {
     metricsBySector.set(p.sector, { sector: p.sector, lat: p.lat, lng: p.lng });
-    const [aq, pl, wx] = await Promise.all([fetchAirQuality(p), fetchPollen(p), fetchWeather(p)]);
+    const [aq, pl, wx, tr] = await Promise.all([fetchAirQuality(p), fetchPollen(p), fetchWeather(p), fetchTraffic(p)]);
     recordStatus(airQuality, aq, p.sector);
     recordStatus(pollen, pl, p.sector);
     recordStatus(weather, wx, p.sector);
+    recordStatus(traffic, tr, p.sector);
     const m = metricsBySector.get(p.sector)!;
     if (aq.hotspot) hotspots.push(aq.hotspot);
     if (pl.hotspot) hotspots.push(pl.hotspot);
     if (wx.hotspot) hotspots.push(wx.hotspot);
-    Object.assign(m, aq.patch ?? {}, pl.patch ?? {}, wx.patch ?? {});
+    if (tr.hotspot) hotspots.push(tr.hotspot);
+    Object.assign(m, aq.patch ?? {}, pl.patch ?? {}, wx.patch ?? {}, tr.patch ?? {});
   });
   await Promise.all(tasks);
 
@@ -247,7 +297,7 @@ export const getLiveHotspots = createServerFn({ method: "GET" }).handler(async (
     hotspots,
     metrics: Array.from(metricsBySector.values()),
     fetchedAt: new Date().toISOString(),
-    source: "Google Maps Platform · Air Quality + Pollen + Weather",
-    services: { airQuality, pollen, weather },
+    source: "Google Maps Platform · Air Quality + Pollen + Weather + Routes (traffic)",
+    services: { airQuality, pollen, weather, traffic },
   };
 });

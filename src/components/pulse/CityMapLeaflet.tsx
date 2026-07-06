@@ -100,7 +100,7 @@ const serviceMeta: Record<ServiceKey, { label: string; icon: typeof Wind }> = {
   traffic:    { label: "Traffic",     icon: Car },
 };
 
-export default function CityMapInner() {
+export default function CityMapInner({ worldView = false, heightClass }: { worldView?: boolean; heightClass?: string } = {}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const trafficRef = useRef<google.maps.TrafficLayer | null>(null);
@@ -140,19 +140,19 @@ export default function CityMapInner() {
         if (cancelled || !containerRef.current) return;
         mapRef.current = new maps.Map(containerRef.current, {
           center: CENTER,
-          zoom: ZOOM,
-          minZoom: 11,
-          maxZoom: 17,
+          zoom: worldView ? 3 : ZOOM,
+          minZoom: 2,
+          maxZoom: 20,
           disableDefaultUI: true,
           zoomControl: true,
           zoomControlOptions: { position: maps.ControlPosition.RIGHT_BOTTOM },
-          gestureHandling: "cooperative",
+          scaleControl: true,
+          mapTypeControl: worldView,
+          streetViewControl: worldView,
+          fullscreenControl: worldView,
+          gestureHandling: "greedy",
           styles: darkMapStyles,
           backgroundColor: "#1a2035",
-          restriction: {
-            latLngBounds: { north: 13.08, south: 12.86, east: 77.72, west: 77.46 },
-            strictBounds: false,
-          },
         });
         setReady(true);
       })

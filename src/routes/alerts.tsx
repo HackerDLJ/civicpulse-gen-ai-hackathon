@@ -42,6 +42,14 @@ const catIcon: Record<Alert["category"], typeof Activity> = {
   health: Activity, environment: Wind, traffic: Car, safety: ShieldAlert, utility: Droplet,
 };
 
+const catLabel: Record<Alert["category"], { text: string; tone: string }> = {
+  health:      { text: "Health",      tone: "border-rose-neon/40 bg-rose-neon/10 text-rose-neon" },
+  environment: { text: "Environment", tone: "border-teal-neon/40 bg-teal-neon/10 text-teal-neon" },
+  traffic:     { text: "Traffic",     tone: "border-amber-neon/40 bg-amber-neon/10 text-amber-neon" },
+  safety:      { text: "Safety",      tone: "border-indigo-neon/40 bg-indigo-neon/10 text-indigo-neon" },
+  utility:     { text: "Utility",     tone: "border-emerald-neon/40 bg-emerald-neon/10 text-emerald-neon" },
+};
+
 const timeRanges = [
   { key: "15m", label: "15 min", minutes: 15 },
   { key: "1h",  label: "1 hour", minutes: 60 },

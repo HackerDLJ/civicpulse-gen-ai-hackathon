@@ -76,7 +76,8 @@ export function Onboarding() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      if (!window.localStorage.getItem(KEY)) setOpen(true);
+      const seen = window.localStorage.getItem(KEY) || window.sessionStorage.getItem(KEY);
+      if (!seen) setOpen(true);
     } catch {
       /* ignore */
     }

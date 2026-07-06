@@ -570,19 +570,25 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <div className="text-sm font-semibold flex items-center gap-2"><Zap className="h-4 w-4 text-indigo-neon" /> Citizen Satisfaction · by Ward</div>
-              <div className="text-[11px] text-muted-foreground">NPS-weighted, rolling 7d</div>
+              <div className="text-[11px] text-muted-foreground">Derived from live Firestore feedback stream ({feedback.length} signals)</div>
             </div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer>
-              <BarChart data={liveWardSatisfaction}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
-                <XAxis dataKey="ward" stroke="oklch(0.7 0.03 258)" fontSize={10} />
-                <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} />
-                <Tooltip contentStyle={{ background: "oklch(0.22 0.025 260)", border: "1px solid oklch(0.35 0.04 262)", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="score" fill="var(--indigo-neon)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {liveWardSatisfaction.length === 0 ? (
+              <div className="h-full grid place-items-center text-[11px] text-muted-foreground">
+                No feedback in the stream yet — chart will populate as signals arrive.
+              </div>
+            ) : (
+              <ResponsiveContainer>
+                <BarChart data={liveWardSatisfaction}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.35 0.03 262 / 0.35)" />
+                  <XAxis dataKey="ward" stroke="oklch(0.7 0.03 258)" fontSize={10} />
+                  <YAxis stroke="oklch(0.7 0.03 258)" fontSize={10} />
+                  <Tooltip contentStyle={{ background: "oklch(0.22 0.025 260)", border: "1px solid oklch(0.35 0.04 262)", borderRadius: 8, fontSize: 12 }} />
+                  <Bar dataKey="score" fill="var(--indigo-neon)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>

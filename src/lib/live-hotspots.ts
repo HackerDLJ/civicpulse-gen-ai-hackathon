@@ -34,7 +34,7 @@ export function deriveGoogleAlerts(result: LiveHotspotsResult | undefined): Aler
   const ageMin = Math.max(0, Math.round((Date.now() - fetched) / 60000));
   const ts = ageMin === 0 ? "just now" : ageMin < 60 ? `${ageMin}m ago` : `${Math.floor(ageMin / 60)}h ${ageMin % 60}m ago`;
 
-  const sevMap = { Critical: "critical", High: "high", Medium: "medium" } as const;
+  const sevMap = { Critical: "critical", High: "high", Medium: "medium", Low: "low" } as const;
 
   return result.hotspots
     .filter((h): h is LiveHotspot & { severity: keyof typeof sevMap } => h.severity in sevMap)

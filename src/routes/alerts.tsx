@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
 import { type Alert } from "@/lib/pulse-data";
 import { useFirestoreAlerts, updateAlertStatus } from "@/lib/firestore-hooks";
-import { AlertTriangle, Zap, Check, Filter, ShieldAlert, Activity, Droplet, Car, Wind, RotateCcw, ChevronDown } from "lucide-react";
+import { useLiveHotspots, deriveGoogleAlerts } from "@/lib/live-hotspots";
+import { AlertTriangle, Zap, Check, Filter, ShieldAlert, Activity, Droplet, Car, Wind, RotateCcw, ChevronDown, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
@@ -55,7 +56,21 @@ const severities: Severity[] = ["critical", "high", "medium", "low"];
 
 function AlertsPage() {
   const { data: alertsData, loading, error } = useFirestoreAlerts();
-  const alerts = alertsData ?? [];
+  const { data: liveData, isFetching: liveFetching } = useLiveHotspots();
+  const firestoreAlerts = alertsData ?? [];
+  const googleAlerts = useMemo(() => deriveGoogleAlerts(liveData), [liveData]);
+  // Merge: Google-derived alerts appear first (they have ageMin=0), then Firestore.
+  // De-dup defensively by id.
+  const alerts = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: Alert[] = [];
+    for (const a of [...googleAlerts, ...firestoreAlerts]) {
+      if (seen.has(a.id)) continue;
+      seen.add(a.id);
+      merged.push(a);
+    }
+    return merged;
+  }, [googleAlerts, firestoreAlerts]);
   const search = Route.useSearch();
 
   const initialSev = (): Set<Severity> => {

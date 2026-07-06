@@ -26,7 +26,7 @@ export default defineTool({
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(key);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-2.0-flash",
       generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
     });
     const system = `You are CivicPulse, a municipal-ops AI. Reply with STRICT JSON:

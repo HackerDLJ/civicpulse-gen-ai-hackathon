@@ -1,7 +1,10 @@
 /// <reference types="google.maps" />
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Car, Wind, HeartPulse, Layers, MapPin, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Car, Wind, HeartPulse, Layers, MapPin, X, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getLiveHotspots } from "@/lib/google-maps.functions";
 
 // ---------- Types ----------
 export type LayerKey = "traffic" | "environment" | "health";

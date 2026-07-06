@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
 import { useStore, aqiTrend, wardSatisfaction, store, type StreamEvent } from "@/lib/pulse-data";
-import { Activity, Wind, Gauge, Smile, TrendingUp, TrendingDown, MapPin, Layers, Zap, Radio, Car, HeartPulse, X } from "lucide-react";
+import { Activity, Wind, Gauge, Smile, TrendingUp, TrendingDown, MapPin, Layers, Zap, Radio, Car, HeartPulse, X, AlertTriangle, ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { KpiCardSkeleton, MapSkeleton, StreamSkeleton, EmptyState } from "@/components/pulse/Skeletons";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -16,18 +18,130 @@ export const Route = createFileRoute("/")({
   component: DashboardPage,
 });
 
-const kpis = [
-  { label: "Active Safety Alerts", value: "14", delta: "-3 vs 24h", icon: Activity, tone: "rose" as const, trend: [12, 15, 18, 14, 17, 14, 14], up: false },
-  { label: "Air Quality Index", value: "82", delta: "+6 pts", icon: Wind, tone: "teal" as const, trend: [70, 72, 74, 78, 80, 79, 82], up: true },
-  { label: "Resource Allocation Eff.", value: "94.2%", delta: "+1.8%", icon: Gauge, tone: "indigo" as const, trend: [88, 89, 91, 92, 93, 93, 94], up: true },
-  { label: "Citizen Satisfaction", value: "76%", delta: "+2.4%", icon: Smile, tone: "emerald" as const, trend: [70, 71, 73, 72, 74, 75, 76], up: true },
+type KpiKey = "alerts" | "aqi" | "resource" | "satisfaction";
+
+type KpiDef = {
+  key: KpiKey;
+  label: string;
+  value: string;
+  delta: string;
+  icon: typeof Activity;
+  tone: "rose" | "teal" | "indigo" | "emerald";
+  trend: number[];
+  up: boolean;
+};
+
+const kpis: KpiDef[] = [
+  { key: "alerts",       label: "Active Safety Alerts",     value: "14",    delta: "-3 vs 24h", icon: Activity, tone: "rose",    trend: [12, 15, 18, 14, 17, 14, 14], up: false },
+  { key: "aqi",          label: "Air Quality Index",         value: "82",    delta: "+6 pts",    icon: Wind,     tone: "teal",    trend: [70, 72, 74, 78, 80, 79, 82], up: true },
+  { key: "resource",     label: "Resource Allocation Eff.",  value: "94.2%", delta: "+1.8%",     icon: Gauge,    tone: "indigo",  trend: [88, 89, 91, 92, 93, 93, 94], up: true },
+  { key: "satisfaction", label: "Citizen Satisfaction",      value: "76%",   delta: "+2.4%",     icon: Smile,    tone: "emerald", trend: [70, 71, 73, 72, 74, 75, 76], up: true },
 ];
 
 const toneMap = {
-  rose: { text: "text-rose-neon" },
-  teal: { text: "text-teal-neon" },
-  indigo: { text: "text-indigo-neon" },
-  emerald: { text: "text-emerald-neon" },
+  rose: { text: "text-rose-neon", bg: "bg-rose-neon", border: "border-rose-neon/40", soft: "bg-rose-neon/10" },
+  teal: { text: "text-teal-neon", bg: "bg-teal-neon", border: "border-teal-neon/40", soft: "bg-teal-neon/10" },
+  indigo: { text: "text-indigo-neon", bg: "bg-indigo-neon", border: "border-indigo-neon/40", soft: "bg-indigo-neon/10" },
+  emerald: { text: "text-emerald-neon", bg: "bg-emerald-neon", border: "border-emerald-neon/40", soft: "bg-emerald-neon/10" },
+};
+
+// -------- 24h summary payloads (Dashboard drill-down) --------
+
+type SectorRow = { sector: string; value: string; delta: number };
+type Anomaly = { at: string; label: string; severity: "high" | "medium" | "low" };
+type Summary = {
+  headline: string;
+  narrative: string;
+  metrics: Array<{ label: string; value: string }>;
+  sectors: SectorRow[];
+  anomalies: Anomaly[];
+};
+
+const kpiSummary: Record<KpiKey, Summary> = {
+  alerts: {
+    headline: "14 active alerts · 3 critical demanding operator attention",
+    narrative: "Alert volume down 18% vs yesterday. Health & environment dominate the queue — the Sector B respiratory cluster remains the top escalation.",
+    metrics: [
+      { label: "Automated", value: "6" },
+      { label: "Resolved 24h", value: "22" },
+      { label: "Median MTTR", value: "38m" },
+      { label: "Escalated", value: "3" },
+    ],
+    sectors: [
+      { sector: "Sector B", value: "4 open", delta: 33 },
+      { sector: "Ward 3", value: "3 open", delta: 12 },
+      { sector: "Ring Rd E-14", value: "2 open", delta: -10 },
+      { sector: "Downtown", value: "2 open", delta: 4 },
+    ],
+    anomalies: [
+      { at: "02:12", label: "Sector B respiratory admissions +22% / 6h", severity: "high" },
+      { at: "07:48", label: "Ring Rd E-14 cascade risk detected", severity: "medium" },
+      { at: "14:04", label: "Ward 7 water pressure -0.7 bar drift", severity: "medium" },
+    ],
+  },
+  aqi: {
+    headline: "AQI trending upward — 82 city-wide, 148 at Sector B monitor",
+    narrative: "PM2.5 plume trapped under a nocturnal inversion. Industrial belt sensors show 2.1× baseline; downwind wards should expect a lagged spike.",
+    metrics: [
+      { label: "Peak 24h", value: "148" },
+      { label: "Nodes > 100", value: "9 / 214" },
+      { label: "PM2.5 avg", value: "42 µg/m³" },
+      { label: "Advisory", value: "Draft" },
+    ],
+    sectors: [
+      { sector: "Sector B",  value: "AQI 148", delta: 34 },
+      { sector: "Riverside", value: "AQI 121", delta: 22 },
+      { sector: "Downtown",  value: "AQI 96",  delta: 11 },
+      { sector: "Ward 8",    value: "AQI 68",  delta: -4 },
+    ],
+    anomalies: [
+      { at: "01:20", label: "Inversion layer detected · plume trap forecast 6h", severity: "high" },
+      { at: "05:40", label: "Node #142 recalibration · baseline drift corrected", severity: "low" },
+      { at: "12:15", label: "Riverside industrial exceedance · 5-node rolling avg", severity: "medium" },
+    ],
+  },
+  resource: {
+    headline: "Allocation efficiency 94.2% · headroom skewed to Health & Transit",
+    narrative: "Reallocations overnight lifted efficiency 1.8 pts. Sanitation is trailing budget by 3.4% — candidate for redistribution to Health surge tonight.",
+    metrics: [
+      { label: "Reallocations 24h", value: "17" },
+      { label: "Idle capacity", value: "5.8%" },
+      { label: "Auto-optimizer", value: "ON" },
+      { label: "Forecast conf.", value: "94%" },
+    ],
+    sectors: [
+      { sector: "Health",       value: "98.1%", delta: 2.4 },
+      { sector: "Transit",      value: "95.6%", delta: 1.1 },
+      { sector: "Safety",       value: "93.2%", delta: 0.6 },
+      { sector: "Environment",  value: "91.4%", delta: 3.0 },
+      { sector: "Sanitation",   value: "86.8%", delta: -3.4 },
+    ],
+    anomalies: [
+      { at: "T-6h", label: "Auto-shifted 4.2 MW · W7 → W8 substation", severity: "low" },
+      { at: "T-3h", label: "Sanitation route 12 missed · replacement dispatched", severity: "medium" },
+    ],
+  },
+  satisfaction: {
+    headline: "Citizen satisfaction 76% · +2.4 pts driven by Transit wins",
+    narrative: "Positive signal concentrated in Ward 8 (new bike lanes) and Riverside (pop-up market). Ward 3 remains the drag — healthcare wait times still the top complaint.",
+    metrics: [
+      { label: "NPS-weighted", value: "76" },
+      { label: "Signals 24h", value: "1,204" },
+      { label: "Positive share", value: "58%" },
+      { label: "Negative share", value: "22%" },
+    ],
+    sectors: [
+      { sector: "Ward 8",     value: "88",  delta: 4.1 },
+      { sector: "Ward 2",     value: "85",  delta: 3.2 },
+      { sector: "Ward 7",     value: "82",  delta: 1.8 },
+      { sector: "Ward 5",     value: "68",  delta: 0.2 },
+      { sector: "Ward 3",     value: "62",  delta: -2.6 },
+    ],
+    anomalies: [
+      { at: "08:20", label: "Ward 3 clinic wait complaints spike (+38%)", severity: "high" },
+      { at: "16:05", label: "Riverside market · positive sentiment surge", severity: "low" },
+    ],
+  },
 };
 
 function Sparkline({ data, tone }: { data: number[]; tone: keyof typeof toneMap }) {

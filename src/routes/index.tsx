@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Operations Dashboard · Pulse" },
+      { title: "Operations Dashboard · CivicPulse" },
       { name: "description", content: "Live KPIs, city map layers, and ingestion stream for municipal operations." },
     ],
   }),

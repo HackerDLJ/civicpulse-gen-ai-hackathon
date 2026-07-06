@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/alerts")({
-  head: () => ({ meta: [{ title: "Live Alerts · Pulse" }, { name: "description", content: "AI-flagged anomalies with automated workflow controls." }] }),
+  head: () => ({ meta: [{ title: "Live Alerts · CivicPulse" }, { name: "description", content: "AI-flagged anomalies with automated workflow controls." }] }),
   component: AlertsPage,
 });
 

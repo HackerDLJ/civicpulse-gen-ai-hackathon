@@ -67,7 +67,7 @@ const sevTone: Record<Hotspot["severity"], string> = {
  * OSM-backed city map. Uses CartoDB Dark Matter tiles for a look that matches
  * CivicPulse's slate palette; base attribution kept intact per OSM policy.
  */
-export function CityMap() {
+export default function CityMapInner() {
   const [mounted, setMounted] = useState(false);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ traffic: true, environment: true, health: true });
   const [hover, setHover] = useState<Hotspot | null>(null);

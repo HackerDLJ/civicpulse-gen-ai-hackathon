@@ -1,12 +1,16 @@
 // Firebase initialization for CivicPulse.
-// NOTE: The Firebase Web `apiKey` is a public identifier (not a secret) — safe to ship to the browser.
-// Add your real value as a workspace build secret named VITE_FIREBASE_API_KEY, or replace the fallback
-// below with the literal string from your Firebase console.
+// The Firebase Web `apiKey` is a public identifier (not a secret) — safe to ship to the browser.
+// We resolve it in this order:
+//   1. `import.meta.env.VITE_FIREBASE_API_KEY` (set as a workspace build secret)
+//   2. The literal fallback below (from the Firebase console) so the client boots
+//      even when the env var isn't populated at build time.
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+const FIREBASE_API_KEY_FALLBACK = "AIzaSyDUMMY_REPLACE_WITH_FIREBASE_WEB_API_KEY";
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? "REPLACE_WITH_FIREBASE_WEB_API_KEY",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK,
   authDomain: "civicpulse-gen-ai-hackathon.firebaseapp.com",
   projectId: "civicpulse-gen-ai-hackathon",
   storageBucket: "civicpulse-gen-ai-hackathon.firebasestorage.app",

@@ -1,6 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, LayerGroup, ZoomControl } from "react-leaflet";
-import type { LatLngExpression, LatLngBoundsExpression } from "leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Car, Wind, HeartPulse, Layers, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +9,7 @@ export type Hotspot = {
   id: string;
   lat: number;
   lng: number;
-  radius: number; // display radius in px
+  radius: number;
   layer: LayerKey;
   color: "rose" | "amber" | "teal" | "indigo" | "emerald";
   title: string;
@@ -22,18 +20,9 @@ export type Hotspot = {
   detail: string;
 };
 
-// Metropolitan center — Bengaluru chosen as a realistic dense urban demo.
-// Swap coords if the user wants a different city; markers are relative.
-const CENTER: LatLngExpression = [12.9716, 77.5946];
+const CENTER = { lat: 12.9716, lng: 77.5946 };
 const ZOOM = 12;
 
-// Bounds keep the tile view scoped even if the user scrolls out.
-const BOUNDS: LatLngBoundsExpression = [
-  [12.86, 77.46],
-  [13.08, 77.72],
-];
-
-// ---------- Realistic hotspot payload (lat/lng around CENTER) ----------
 const hotspots: Hotspot[] = [
   { id: "h1", lat: 12.998, lng: 77.560, radius: 26, layer: "health", color: "rose",   title: "Respiratory cluster",    sector: "Sector B",         metric: "Admissions Δ",   value: "+22% / 6h", severity: "Critical", detail: "PM2.5 plume trapping under inversion layer. 340 walk-ins projected tonight." },
   { id: "h2", lat: 12.985, lng: 77.640, radius: 22, layer: "traffic", color: "amber", title: "Ring Rd E-14 congestion", sector: "Ring Rd E-14",     metric: "Flow saturation", value: "92%",       severity: "High",     detail: "Signal desync + freight overlap. Cascade risk in 40 min." },
@@ -51,6 +40,10 @@ const layerMeta: Record<LayerKey, { label: string; icon: typeof Car; ring: strin
   health:      { label: "Health",      icon: HeartPulse, ring: "border-rose-neon/50 bg-rose-neon/10 text-rose-neon",    tone: "text-rose-neon" },
 };
 
+const colorHex: Record<Hotspot["color"], string> = {
+  rose: "#fb7185", amber: "#fbbf24", teal: "#2dd4bf", indigo: "#818cf8", emerald: "#34d399",
+};
+
 const colorVar: Record<Hotspot["color"], string> = {
   rose: "var(--rose-neon)", amber: "var(--amber-neon)", teal: "var(--teal-neon)", indigo: "var(--indigo-neon)", emerald: "var(--emerald-neon)",
 };
@@ -63,22 +56,128 @@ const sevTone: Record<Hotspot["severity"], string> = {
   Nominal:  "text-emerald-neon",
 };
 
-/**
- * OSM-backed city map. Uses CartoDB Dark Matter tiles for a look that matches
- * CivicPulse's slate palette; base attribution kept intact per OSM policy.
- */
+// Dark map styling matching CivicPulse's slate palette.
+const darkMapStyles: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#1a2035" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a2035" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8a92b2" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#a8b2d1" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2a3350" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#6b7599" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3a4670" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0f1629" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4a5578" }] },
+];
+
+// Global loader — Google Maps JS must load exactly once per page.
+let mapsLoader: Promise<typeof google.maps> | null = null;
+function loadGoogleMaps(): Promise<typeof google.maps> {
+  if (typeof window === "undefined") return Promise.reject(new Error("SSR"));
+  if ((window as any).google?.maps) return Promise.resolve((window as any).google.maps);
+  if (mapsLoader) return mapsLoader;
+
+  const key = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY;
+  const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID;
+  if (!key) return Promise.reject(new Error("Missing Google Maps browser key"));
+
+  mapsLoader = new Promise((resolve, reject) => {
+    const cbName = "__civicpulseInitGMaps";
+    (window as any)[cbName] = () => resolve((window as any).google.maps);
+    const s = document.createElement("script");
+    const params = new URLSearchParams({ key, loading: "async", callback: cbName });
+    if (channel) params.set("channel", channel);
+    s.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
+    s.async = true;
+    s.defer = true;
+    s.onerror = () => reject(new Error("Failed to load Google Maps"));
+    document.head.appendChild(s);
+  });
+  return mapsLoader;
+}
+
 export default function CityMapInner() {
-  const [mounted, setMounted] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<Record<string, google.maps.Marker>>({});
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ traffic: true, environment: true, health: true });
   const [hover, setHover] = useState<Hotspot | null>(null);
   const [pinned, setPinned] = useState<Hotspot | null>(null);
 
-  // react-leaflet touches window on import; only render post-mount to avoid SSR crash.
-  useEffect(() => { setMounted(true); }, []);
-
   const visible = useMemo(() => hotspots.filter((h) => layers[h.layer]), [layers]);
   const activeCount = Object.values(layers).filter(Boolean).length;
   const focused = pinned ?? hover;
+
+  // Load map once.
+  useEffect(() => {
+    let cancelled = false;
+    loadGoogleMaps()
+      .then((maps) => {
+        if (cancelled || !containerRef.current) return;
+        mapRef.current = new maps.Map(containerRef.current, {
+          center: CENTER,
+          zoom: ZOOM,
+          minZoom: 11,
+          maxZoom: 17,
+          disableDefaultUI: true,
+          zoomControl: true,
+          zoomControlOptions: { position: maps.ControlPosition.RIGHT_BOTTOM },
+          gestureHandling: "cooperative",
+          styles: darkMapStyles,
+          backgroundColor: "#1a2035",
+          restriction: {
+            latLngBounds: { north: 13.08, south: 12.86, east: 77.72, west: 77.46 },
+            strictBounds: false,
+          },
+        });
+        setReady(true);
+      })
+      .catch((e) => setError(e.message ?? "Map failed to load"));
+    return () => { cancelled = true; };
+  }, []);
+
+  // Sync markers whenever visibility or focus changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !(window as any).google?.maps) return;
+    const maps = (window as any).google.maps as typeof google.maps;
+
+    // Remove markers no longer visible.
+    for (const id of Object.keys(markersRef.current)) {
+      if (!visible.find((h) => h.id === id)) {
+        markersRef.current[id].setMap(null);
+        delete markersRef.current[id];
+      }
+    }
+
+    for (const h of visible) {
+      const active = focused?.id === h.id;
+      const scale = (active ? h.radius * 0.7 : h.radius * 0.55) * 0.6;
+      const color = colorHex[h.color];
+      const icon: google.maps.Symbol = {
+        path: maps.SymbolPath.CIRCLE,
+        scale,
+        fillColor: color,
+        fillOpacity: active ? 0.5 : 0.32,
+        strokeColor: color,
+        strokeOpacity: 0.95,
+        strokeWeight: active ? 3 : 1.5,
+      };
+      let m = markersRef.current[h.id];
+      if (!m) {
+        m = new maps.Marker({ position: { lat: h.lat, lng: h.lng }, map, title: `${h.title} · ${h.sector}`, icon });
+        m.addListener("mouseover", () => setHover(h));
+        m.addListener("mouseout", () => setHover(null));
+        m.addListener("click", () => setPinned((p) => (p?.id === h.id ? null : h)));
+        markersRef.current[h.id] = m;
+      } else {
+        m.setIcon(icon);
+      }
+    }
+  }, [visible, focused]);
 
   return (
     <div>
@@ -114,64 +213,18 @@ export default function CityMapInner() {
       </div>
 
       <div className="relative aspect-[16/10] sm:aspect-[16/9] xl:aspect-[16/10] w-full rounded-xl border border-border overflow-hidden bg-surface-1">
-        {mounted && (
-          <MapContainer
-            center={CENTER}
-            zoom={ZOOM}
-            minZoom={11}
-            maxZoom={17}
-            maxBounds={BOUNDS}
-            zoomControl={false}
-            attributionControl
-            scrollWheelZoom={false}
-            className="h-full w-full civicpulse-leaflet"
-            style={{ background: "oklch(0.18 0.02 260)" }}
-          >
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              subdomains={["a", "b", "c", "d"]}
-              maxZoom={19}
-            />
-            <ZoomControl position="bottomright" />
+        <div ref={containerRef} className="h-full w-full" />
 
-            <LayerGroup>
-              {visible.map((h) => {
-                const active = focused?.id === h.id;
-                const color = colorVar[h.color];
-                return (
-                  <CircleMarker
-                    key={h.id}
-                    center={[h.lat, h.lng]}
-                    radius={active ? h.radius * 0.7 : h.radius * 0.55}
-                    pathOptions={{
-                      color,
-                      weight: active ? 3 : 1.5,
-                      opacity: 0.95,
-                      fillColor: color,
-                      fillOpacity: active ? 0.45 : 0.28,
-                      className: "civicpulse-marker",
-                    }}
-                    eventHandlers={{
-                      mouseover: () => setHover(h),
-                      mouseout: () => setHover(null),
-                      click: () => setPinned(pinned?.id === h.id ? null : h),
-                    }}
-                  >
-                    <Tooltip direction="top" offset={[0, -6]} opacity={1} className="civicpulse-tooltip">
-                      <span className="font-semibold">{h.title}</span>
-                      <span className="opacity-70"> · {h.sector}</span>
-                    </Tooltip>
-                  </CircleMarker>
-                );
-              })}
-            </LayerGroup>
-          </MapContainer>
+        {!ready && !error && (
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">Loading map…</div>
+        )}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-rose-neon px-6 text-center">{error}</div>
         )}
 
         {/* Overlay: header chips */}
         <div className="pointer-events-none absolute left-3 top-3 z-[400] glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
-          <MapPin className="h-3 w-3 text-indigo-neon" /> Metropolitan District · OSM
+          <MapPin className="h-3 w-3 text-indigo-neon" /> Metropolitan District · Google Maps
         </div>
         <div className="pointer-events-none absolute right-3 top-3 z-[400] glass-panel rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5">
           <Layers className="h-3 w-3 text-teal-neon" /> {activeCount} layer{activeCount === 1 ? "" : "s"} · {visible.length} hotspots

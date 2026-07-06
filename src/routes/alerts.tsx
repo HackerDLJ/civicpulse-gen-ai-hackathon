@@ -6,7 +6,7 @@ import { useLiveHotspots, deriveGoogleAlerts } from "@/lib/live-hotspots";
 import type { WardMetrics } from "@/lib/google-maps.functions";
 import {
   AlertTriangle, Zap, Check, Filter, ShieldAlert, Activity, Droplet, Car, Wind,
-  RotateCcw, ChevronDown, Radio, X, Wind as WindIcon, Flower2, Thermometer, TrafficCone, Loader2,
+  RotateCcw, ChevronDown, Radio, X, Flower2, Thermometer, TrafficCone, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";

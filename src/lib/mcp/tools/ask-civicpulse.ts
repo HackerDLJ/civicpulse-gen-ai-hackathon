@@ -11,9 +11,9 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true },
   handler: async ({ prompt }) => {
-    const key = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    const key = process.env.GEMINI_API_KEY;
     if (!key) {
-      return { content: [{ type: "text", text: "GOOGLE_API_KEY is not configured on the server." }], isError: true };
+      return { content: [{ type: "text", text: "GEMINI_API_KEY is not configured on the server." }], isError: true };
     }
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(key);

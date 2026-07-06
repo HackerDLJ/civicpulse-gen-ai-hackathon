@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Check, MessageSquareText, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
-import { EmptyState } from "@/components/pulse/Skeletons";
+import { EmptyState, TableSkeleton, useHydrated } from "@/components/pulse/Skeletons";
 
 export const Route = createFileRoute("/feedback")({
   head: () => ({ meta: [{ title: "Community Feedback · CivicPulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),

@@ -2,15 +2,133 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/pulse/AppShell";
 import { useFirestoreFeedback, toggleFeedbackHandled } from "@/lib/firestore-hooks";
 import { cn } from "@/lib/utils";
-import { Check, MessageSquareText, ArrowRight, Sparkles, Search, Filter, RotateCcw } from "lucide-react";
+import { Check, MessageSquareText, ArrowRight, Sparkles, Search, Filter, RotateCcw, Star, MapPin, RefreshCw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 import { EmptyState, TableSkeleton, ErrorState } from "@/components/pulse/Skeletons";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getGoogleCommunityFeedback } from "@/lib/google-maps.functions";
 
 export const Route = createFileRoute("/feedback")({
   head: () => ({ meta: [{ title: "Community Feedback · CivicPulse" }, { name: "description", content: "Unstructured citizen signal transformed into sentiment, categories, and actions." }] }),
   component: FeedbackPage,
 });
+
+function GoogleCommunityPanel() {
+  const fetchLive = useServerFn(getGoogleCommunityFeedback);
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["google-community-feedback"],
+    queryFn: () => fetchLive(),
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
+    retry: 2,
+  });
+
+  const reviews = data?.reviews ?? [];
+  const sentTone: Record<string, string> = {
+    Positive: "text-emerald-neon bg-emerald-neon/10 border-emerald-neon/30",
+    Negative: "text-rose-neon bg-rose-neon/10 border-rose-neon/30",
+    Neutral: "text-teal-neon bg-teal-neon/10 border-teal-neon/30",
+  };
+  const fetchedLabel = data ? new Date(data.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+
+  return (
+    <div className="mt-6 glass-panel rounded-2xl p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-indigo-neon" /> Live Google Maps community feedback
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            Reviews from nearby places pulled live via Google Places API — grouped by ward · updated {fetchedLabel}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {data && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-surface-2 text-muted-foreground">
+              {data.status.succeeded}/{data.status.attempted} wards synced
+            </span>
+          )}
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-surface-2 disabled:opacity-60"
+          >
+            <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} /> Refresh
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="mt-4"><TableSkeleton rows={3} cols={1} /></div>
+      ) : error ? (
+        <div className="mt-4">
+          <ErrorState
+            title="Google community feed unavailable"
+            hint={error instanceof Error ? error.message : "Unable to reach Google Places"}
+            onRetry={() => refetch()}
+          />
+        </div>
+      ) : reviews.length === 0 ? (
+        <div className="mt-4">
+          <EmptyState
+            title="No Google community reviews yet"
+            hint={<>Google Places didn't return reviews for the tracked wards this cycle.</>}
+            icon={<MapPin className="h-5 w-5" />}
+            actionLabel="Retry"
+            onAction={() => refetch()}
+          />
+        </div>
+      ) : (
+        <>
+          {data && data.status.failed > 0 && (
+            <div className="mt-3 text-[11px] rounded-md border border-amber-neon/40 bg-amber-neon/10 text-amber-neon px-2.5 py-1.5 inline-flex items-center gap-1.5">
+              <AlertCircle className="h-3 w-3" /> Partial sync: {data.status.failed} ward{data.status.failed > 1 ? "s" : ""} failed
+            </div>
+          )}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {reviews.map((r) => (
+              <div key={r.id} className="rounded-xl border border-border bg-surface-1/60 p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {r.authorPhoto ? (
+                      <img src={r.authorPhoto} alt="" className="h-6 w-6 rounded-full border border-border" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="h-6 w-6 rounded-full bg-surface-3 border border-border flex items-center justify-center text-[10px] font-semibold">
+                        {r.author.slice(0, 1)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium truncate">{r.author}</div>
+                      <div className="text-[10px] text-muted-foreground truncate">{r.placeName}</div>
+                    </div>
+                  </div>
+                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border shrink-0", sentTone[r.sentiment])}>
+                    {r.sentiment}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className={cn("h-3 w-3", i < r.rating ? "fill-amber-neon text-amber-neon" : "text-muted-foreground/40")} />
+                  ))}
+                  <span className="text-[10px] text-muted-foreground ml-1">{r.relativeTime}</span>
+                </div>
+                <p className="text-xs text-muted-foreground italic line-clamp-4">"{r.text}"</p>
+                <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                  <span className="text-[10px] inline-flex items-center gap-1 text-muted-foreground">
+                    <MapPin className="h-3 w-3" /> {r.ward}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">Google Maps</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const sentimentTone: Record<string, string> = {
   Positive: "text-emerald-neon bg-emerald-neon/10 border-emerald-neon/30",

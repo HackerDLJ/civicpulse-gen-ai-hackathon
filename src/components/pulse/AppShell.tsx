@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
 
             {/* Mobile brand mark (sidebar hidden on mobile) */}
-            <Link to="/hero" className="lg:hidden flex items-center gap-2 shrink-0" aria-label="CivicPulse home">
+            <Link to="/" className="lg:hidden flex items-center gap-2 shrink-0" aria-label="CivicPulse home">
               <div className="relative grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-neon to-teal-neon">
                 <img src={logoAsset.url} alt="" className="h-4 w-4 [filter:brightness(0)_invert(1)]" />
                 <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-neon pulse-dot" />
@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
 
             <Link
-              to="/hero"
+              to="/"
               className="hidden md:inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg border border-border bg-surface-1/60 hover:bg-surface-2 hover:text-foreground transition text-[11px] text-muted-foreground shrink-0"
               aria-label="About CivicPulse"
             >

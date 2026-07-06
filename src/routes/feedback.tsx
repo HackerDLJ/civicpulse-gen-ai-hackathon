@@ -129,6 +129,7 @@ function FeedbackPage() {
               />
             </div>
           )}
+          </>)}
         </div>
       </div>
     </AppShell>

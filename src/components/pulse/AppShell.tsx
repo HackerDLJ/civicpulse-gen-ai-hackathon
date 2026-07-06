@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {/* Mobile brand mark (sidebar hidden on mobile) */}
             <Link to="/hero" className="lg:hidden flex items-center gap-2 shrink-0" aria-label="CivicPulse home">
               <div className="relative grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-neon to-teal-neon">
-                <Radio className="h-4 w-4 text-primary-foreground" />
+                <img src={logoAsset.url} alt="" className="h-4 w-4 [filter:brightness(0)_invert(1)]" />
                 <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-neon pulse-dot" />
               </div>
               <span className="text-sm font-semibold tracking-tight hidden xs:inline">CivicPulse</span>
@@ -141,7 +141,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <aside className="absolute inset-y-0 left-0 w-[82%] max-w-[300px] bg-sidebar border-r border-sidebar-border flex flex-col shadow-2xl">
             <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
               <div className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-neon to-teal-neon shrink-0">
-                <Radio className="h-4.5 w-4.5 text-primary-foreground" />
+                <img src={logoAsset.url} alt="" className="h-5 w-5 [filter:brightness(0)_invert(1)]" />
                 <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-neon pulse-dot" />
               </div>
               <div className="min-w-0 flex-1">

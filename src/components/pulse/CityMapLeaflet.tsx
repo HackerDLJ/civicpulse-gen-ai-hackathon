@@ -185,6 +185,19 @@ export default function CityMapInner() {
     }
   }, [visible, focused]);
 
+  // Toggle Google's live TrafficLayer with the "traffic" layer button.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !(window as any).google?.maps) return;
+    const maps = (window as any).google.maps as typeof google.maps;
+    if (layers.traffic) {
+      if (!trafficRef.current) trafficRef.current = new maps.TrafficLayer();
+      trafficRef.current.setMap(map);
+    } else if (trafficRef.current) {
+      trafficRef.current.setMap(null);
+    }
+  }, [layers.traffic, ready]);
+
   return (
     <div>
       {/* Layer toggles */}

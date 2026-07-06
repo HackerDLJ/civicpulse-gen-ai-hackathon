@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Radio, Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles,
+  Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles,
   ArrowRight, Wind, Gauge, MapPin, Zap, ShieldCheck, Cpu, Waves,
 } from "lucide-react";
+import logoAsset from "@/assets/civicpulse-logo.svg.asset.json";
 
 export const Route = createFileRoute("/hero")({
   head: () => ({
@@ -54,7 +55,7 @@ function HeroPage() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/60 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto flex items-center gap-3 px-4 sm:px-6 lg:px-8 h-16">
           <div className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-neon to-teal-neon shrink-0">
-            <Radio className="h-4 w-4 text-primary-foreground" />
+            <img src={logoAsset.url} alt="" className="h-5 w-5 [filter:brightness(0)_invert(1)]" />
             <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-neon pulse-dot" />
           </div>
           <div className="min-w-0">

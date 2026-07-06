@@ -1,9 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles, Radio,
+  Activity, AlertTriangle, BarChart3, MessageSquareText, Sparkles,
   ChevronsLeft, ChevronsRight, LayoutGrid,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import logoAsset from "@/assets/civicpulse-logo.svg.asset.json";
 import { cn } from "@/lib/utils";
 
 const nav: Array<{ to: string; label: string; icon: typeof Activity; exact?: boolean; hint: string }> = [
@@ -47,8 +48,8 @@ export function AppSidebar() {
       {/* Brand + collapse toggle */}
       <div className={cn("pt-6 pb-5", collapsed ? "px-2" : "px-5")}>
         <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
-          <div className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-neon to-teal-neon shrink-0">
-            <Radio className="h-4.5 w-4.5 text-primary-foreground" />
+          <div className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-neon to-teal-neon shrink-0 shadow-lg shadow-indigo-neon/20">
+            <img src={logoAsset.url} alt="" className="h-5 w-5 [filter:brightness(0)_invert(1)]" />
             <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-neon pulse-dot" />
           </div>
           {!collapsed && (
